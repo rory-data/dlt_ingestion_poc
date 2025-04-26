@@ -206,7 +206,12 @@ def test_clean_data_positive(sample_arrow_table, expected_arrow_table_cleaned):
 def test_clean_data_no_strings(arrow_table_no_strings):
     """Test clean_data with a table containing no string columns."""
     cleaned_table = clean_data(arrow_table_no_strings)
-    assert cleaned_table == arrow_table_no_strings  # Should return the original table object
+    # Convert to Polars for robust comparison
+    df_cleaned_result = pl.from_arrow(cleaned_table)  # type: ignore[assignment]
+    df_original = pl.from_arrow(arrow_table_no_strings)  # type: ignore[assignment]
+    assert isinstance(df_cleaned_result, pl.DataFrame)
+    assert isinstance(df_original, pl.DataFrame)
+    assert_frame_equal(df_cleaned_result, df_original)  # Compare content and schema
 
 
 def test_clean_data_empty():
