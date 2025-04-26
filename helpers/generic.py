@@ -136,5 +136,4 @@ def clean_string_columns(df: pl.DataFrame) -> pl.DataFrame:
             r"[\p{C}]", ""
         )  # Remove Unicode control characters (case-insensitive flag removed as it's not needed for \p{C})
         .str.strip_chars()  # Strip leading/trailing whitespace
-        .cast(pl.Utf8)  # Ensure the column is Utf8 type
     )
