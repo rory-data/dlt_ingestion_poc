@@ -2,9 +2,6 @@
 log_level="INFO"  # the system log level of dlt
 dlthub_telemetry = false
 
-[sources.filesystem]
-file_name = 'census.parquet'
-
 [destination.filesystem]
 kwargs = '{"auto_mkdir": true}'
 
