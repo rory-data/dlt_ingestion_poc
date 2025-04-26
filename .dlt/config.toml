@@ -1,0 +1,16 @@
+[runtime]
+log_level="INFO"  # the system log level of dlt
+dlthub_telemetry = false
+
+[sources.filesystem]
+file_name = 'census.parquet'
+
+[destination.filesystem]
+kwargs = '{"auto_mkdir": true}'
+
+[sources.data_writer]
+file_format = "parquet"
+
+[normalize.data_writer]
+file_max_items=1000000
+file_max_bytes=1000000
