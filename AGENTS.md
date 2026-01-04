@@ -37,6 +37,18 @@ Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructi
 - `loguru` is the preferred logging library, preferably using structured logging. `loguru` prefers brace-style formatting.
 - See `instructions/language/python.instructions.md` for details
 
+## dlt Development
+
+- dlt means "data load tool". It is an open source Python library installable via `uv add dlt`.
+- To create a new pipeline, use `dlt init <source> <destination>`.
+- The dlt library comes with the `dlt` CLI. Add the `--help` flag to any command to verify its specs.
+- The preferred way to configure dlt (sources, resources, destinations, etc.) is to use `.dlt/config.toml` and `.dlt/secrets.toml`. Make sure to fill required fields when adding a source or resource.
+- During development, always set `dev_mode=True` when creating a dlt Pipeline. `pipeline = dlt.pipeline(..., dev_mode=True)`. This allows to reset the pipeline's schema and state between iterations.
+- Use type annotations only if you're certain you're properly importing the types.
+- Use dlt's REST API source if loading data from the web.
+- Use dlt's SQL source when loading data from an SQL database or backend.
+- Use dlt's filesystem source if loading data from files (CSV, PDF, Parquet, JSON, and more). This works for local filesystems and cloud buckets (AWS, Azure, GCP, Minio, etc.).
+
 ### Go Development
 
 - Use Go 1.21+ with modern features (generics, slices package)

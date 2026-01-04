@@ -51,7 +51,7 @@ def _detect_invalid_characters(
         column_name: Name of the column for reporting
 
     Returns:
-        List of DataQualityIssue objects with severity ERROR
+        List of DataQualityIssue objects with severity CRITICAL
     """
     # Detect non-printable characters (catches control chars and other invalid chars)
     printable_mask = pc.utf8_is_printable(column)  # type: ignore
@@ -63,7 +63,7 @@ def _detect_invalid_characters(
 
     return [
         DataQualityIssue(
-            severity=Severity.ERROR,
+            severity=Severity.CRITICAL,
             issue_type="Invalid Characters (control or non-printable)",
             column=column_name,
             row_indices=row_indices,
@@ -96,6 +96,6 @@ def validate_string_columns(table: pa.Table) -> list[DataQualityIssue]:
         issues.extend(_detect_invalid_characters(col, name))
         issues.extend(_detect_replacement_characters(col, name))
 
-    # Sort by severity (ERROR first) then by column name
-    issues.sort(key=lambda x: (x.severity != Severity.ERROR, x.column))
+    # Sort by severity (CRITICAL first) then by column name
+    issues.sort(key=lambda x: (x.severity != Severity.CRITICAL, x.column))
     return issues

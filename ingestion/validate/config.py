@@ -15,8 +15,8 @@ class Rules(str, Enum):
 class Severity(Enum):
     """Data quality issue severity levels."""
 
-    ERROR = "ERROR"
-    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"  # The issue is severe enough to potentially block processing
+    WARNING = "WARNING"  # The issue is noteworthy but not blocking
 
 
 @dataclass

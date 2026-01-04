@@ -1,41 +1,53 @@
 """Data quality validator for Arrow-related data structures."""
 
+from collections.abc import Iterator
+from pathlib import Path
 from typing import Annotated, Literal
 
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.parquet as pq
 from loguru import logger
 
 from ingestion.validate.config import DataQualityIssue, Severity
 from ingestion.validate.utf8 import validate_string_columns
 
 
+class DataQualityError(Exception):
+    """Raised when data quality validation fails in 'reject' mode."""
+
+    pass
+
+
 class Validator:
     """Data quality validator for Arrow-related data structures."""
 
-    validator_type: Annotated[
-        Literal["arrow", "syntactic", "semantic"],
-        "This selects the type of validator to use. 'arrow' for PyArrow data structures, ",
-    ] = "arrow"
-    quarantine: bool = False
-    reject: bool = False
-
     def __init__(
         self,
-        validator_type: Literal["arrow", "syntactic", "semantic"] = "arrow",
-        quarantine: bool = False,
-        reject: bool = False,
+        validator_type: Annotated[
+            Literal["arrow", "syntactic", "semantic"],
+            "This selects the type of validator to use. 'arrow' for PyArrow data structures, ",
+        ] = "arrow",
+        issue_action: Annotated[
+            Literal["reject", "quarantine"],
+            "This selects the action to take when issues are found. 'quarantine' to separate \
+            bad records and not block pipeline progress; 'reject' to block the entire batch.",
+        ] = "reject",
+        quarantine_path: Annotated[
+            str | Path | None,
+            "Optional directory path to write quarantined records to as Parquet files.",
+        ] = None,
     ) -> None:
         """Initialise the validator.
 
         Args:
             validator_type: The type of validation to perform.
-            quarantine: Whether to quarantine bad records.
-            reject: Whether to reject the entire batch if errors are found.
+            issue_action: The action to take when issues are found.
+            quarantine_path: Path to store quarantined records.
         """
         self.validator_type = validator_type
-        self.quarantine = quarantine
-        self.reject = reject
+        self.issue_action = issue_action
+        self.quarantine_path = Path(quarantine_path) if quarantine_path else None
 
     @staticmethod
     def get_bad_rows(issues: list[DataQualityIssue]) -> set[int]:
@@ -108,7 +120,7 @@ class Validator:
 
         # Sort each row's issues by severity
         for row_issues in issues_by_row.values():
-            row_issues.sort(key=lambda x: x.severity != Severity.ERROR)
+            row_issues.sort(key=lambda x: x.severity != Severity.CRITICAL)
 
         return dict(sorted(issues_by_row.items()))
 
@@ -123,13 +135,13 @@ class Validator:
             logger.info("No data quality issues detected")
             return
 
-        error_count = sum(1 for i in issues if i.severity == Severity.ERROR)
+        critical_count = sum(1 for i in issues if i.severity == Severity.CRITICAL)
         warning_count = sum(1 for i in issues if i.severity == Severity.WARNING)
         bad_rows = Validator.get_bad_rows(issues)
 
         logger.warning(
-            "Found {} error(s) and {} warning(s) affecting {} row(s)",
-            error_count,
+            "Found {} critical issue(s) and {} warning(s) affecting {} row(s)",
+            critical_count,
             warning_count,
             len(bad_rows),
         )
@@ -144,30 +156,35 @@ class Validator:
                     row_issues[row_idx] = []
                 row_issues[row_idx].append((issue, sample_val))
 
-        # Report grouped by row, sorted by severity (errors first)
+        # Report grouped by row, sorted by severity (critical first)
         for row_idx in sorted(bad_rows):
             logger.warning(f"Row {row_idx}:")
-            # Sort this row's issues: errors first, then warnings
+            # Sort this row's issues: critical first, then warnings
             row_issue_list = sorted(
                 row_issues[row_idx],
-                key=lambda x: x[0].severity != Severity.ERROR,
+                key=lambda x: x[0].severity != Severity.CRITICAL,
             )
             for issue, sample_value in row_issue_list:
-                log_level = "ERROR" if issue.severity == Severity.ERROR else "WARNING"
+                log_level = (
+                    "ERROR" if issue.severity == Severity.CRITICAL else "WARNING"
+                )
                 msg = (
                     f"  [{issue.severity.value}] {issue.issue_type} in column "
                     f"'{issue.column}': {sample_value!r}"
                 )
                 logger.log(log_level, msg)
 
-    def validate(self, data: pa.Table | pa.RecordBatch) -> list[DataQualityIssue]:
+    def validate(self, data: pa.Table | pa.RecordBatch) -> Iterator[pa.Table]:
         """Validate the given PyArrow data structure for data quality issues.
 
         Args:
             data: PyArrow Table or RecordBatch to validate
 
-        Returns:
-            List of detected DataQualityIssue objects
+        Yields:
+            PyArrow Table (clean records if in quarantine mode, all records if no issues)
+
+        Raises:
+            DataQualityError: If issues are found and issue_action is 'reject'
         """
         if isinstance(data, pa.RecordBatch):
             table = pa.Table.from_batches([data])
@@ -180,18 +197,36 @@ class Validator:
             case _:
                 raise TypeError(f"Unsupported validator type: {self.validator_type}")
 
+        if not issues:
+            yield table
+            return
+
         self.report_issues(issues)
+        bad_rows = self.get_bad_rows(issues)
+        clean_table, bad_table = self.quarantine_bad_records(table, bad_rows)
 
-        # Quarantine bad records for producer feedback
-        if issues:
-            bad_rows = self.get_bad_rows(issues)
-            clean_table, bad_table = self.quarantine_bad_records(table, bad_rows)
+        if self.quarantine_path and bad_table.num_rows > 0:
+            import datetime
 
-            logger.info(
-                "Total: {} rows | Clean: {} | Bad: {}",
-                table.num_rows,
-                clean_table.num_rows,
-                bad_table.num_rows,
+            self.quarantine_path.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            file_path = self.quarantine_path / f"bad_records_{timestamp}.parquet"
+            pq.write_table(bad_table, file_path)
+            logger.info("Bad records written to: {}", file_path)
+
+        if self.issue_action == "reject":
+            error_msg = (
+                f"Validation failed with {len(issues)} issues affecting "
+                f"{len(bad_rows)} rows"
             )
+            raise DataQualityError(error_msg)
 
-        return issues
+        # quarantine mode
+        logger.warning(
+            "Quarantined {} bad records. Proceeding with {} clean records.",
+            bad_table.num_rows,
+            clean_table.num_rows,
+        )
+
+        if clean_table.num_rows > 0:
+            yield clean_table
