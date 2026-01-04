@@ -1,12 +1,10 @@
 """Data quality validator for Arrow-related data structures."""
 
-from collections.abc import Iterator
-from pathlib import Path
-from typing import Annotated, Literal
+from dataclasses import dataclass, field
+from typing import Annotated, Any, Literal
 
 import pyarrow as pa
 import pyarrow.compute as pc
-import pyarrow.parquet as pq
 from loguru import logger
 
 from ingestion.validate.config import DataQualityIssue, Severity
@@ -19,214 +17,271 @@ class DataQualityError(Exception):
     pass
 
 
-class Validator:
-    """Data quality validator for Arrow-related data structures."""
+@dataclass
+class ValidationSummary:
+    """Accumulated validation results across multiple batches.
+
+    This class can be used to wrap a dictionary (e.g. dlt state) to provide
+    convenient update and reporting methods.
+    """
+
+    total_rows: int = 0
+    total_bad_rows: int = 0
+    # Record type -> count of clean rows
+    record_counts: dict[str, int] = field(default_factory=dict)
+    # Record type -> expected count from trailer
+    expected_record_counts: dict[str, int] = field(default_factory=dict)
+    # "issue_type|column|severity" -> count of affected rows
+    issue_counts: dict[str, int] = field(default_factory=dict)
+    # "issue_type|column|severity" -> list of sample values
+    samples: dict[str, list[str]] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ValidationSummary":
+        """Create a summary from a dictionary (e.g. from dlt state)."""
+        return cls(
+            total_rows=data.get("total_rows", 0),
+            total_bad_rows=data.get("total_bad_rows", 0),
+            record_counts=data.get("record_counts", {}),
+            expected_record_counts=data.get("expected_record_counts", {}),
+            issue_counts=data.get("issue_counts", {}),
+            samples=data.get("samples", {}),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert summary to a dictionary for persistence."""
+        return {
+            "total_rows": self.total_rows,
+            "total_bad_rows": self.total_bad_rows,
+            "record_counts": self.record_counts,
+            "expected_record_counts": self.expected_record_counts,
+            "issue_counts": self.issue_counts,
+            "samples": self.samples,
+        }
+
+    def update(
+        self, issues: list[DataQualityIssue], batch_rows: int, bad_rows_count: int
+    ) -> None:
+        """Update summary with issues from a new batch.
+
+        Args:
+            issues: List of issues found in the current batch
+            batch_rows: Total rows in the current batch
+            bad_rows_count: Total number of rows with at least one issue in this batch
+        """
+        self.total_rows += batch_rows
+        self.total_bad_rows += bad_rows_count
+
+        for issue in issues:
+            key = f"{issue.issue_type}|{issue.column}|{issue.severity.value}"
+            self.issue_counts[key] = self.issue_counts.get(key, 0) + issue.issue_count
+
+            if key not in self.samples:
+                self.samples[key] = []
+
+            # Keep a small set of unique samples
+            current_samples = set(self.samples[key])
+            if len(current_samples) < 10:
+                for val in issue.sample_values:
+                    if len(current_samples) >= 10:
+                        break
+                    if val not in current_samples:
+                        self.samples[key].append(val)
+                        current_samples.add(val)
+
+    def add_record_counts(self, counts: dict[str, int]) -> None:
+        """Add record counts to the summary.
+
+        Args:
+            counts: Dictionary mapping record type to row count
+        """
+        for rt, count in counts.items():
+            self.record_counts[rt] = self.record_counts.get(rt, 0) + count
+
+
+class ArrowValidator:
+    """Data quality validator for Arrow-related data structures.
+
+    This class is stateless and focused on Arrow-based validation.
+    """
 
     def __init__(
         self,
-        validator_type: Annotated[
-            Literal["arrow", "syntactic", "semantic"],
-            "This selects the type of validator to use. 'arrow' for PyArrow data structures, ",
-        ] = "arrow",
         issue_action: Annotated[
             Literal["reject", "quarantine"],
             "This selects the action to take when issues are found. 'quarantine' to separate \
             bad records and not block pipeline progress; 'reject' to block the entire batch.",
         ] = "reject",
-        quarantine_path: Annotated[
-            str | Path | None,
-            "Optional directory path to write quarantined records to as Parquet files.",
-        ] = None,
+        check_nfc: bool = False,
     ) -> None:
         """Initialise the validator.
 
         Args:
-            validator_type: The type of validation to perform.
             issue_action: The action to take when issues are found.
-            quarantine_path: Path to store quarantined records.
+            check_nfc: Whether to perform expensive NFC normalization check.
         """
-        self.validator_type = validator_type
         self.issue_action = issue_action
-        self.quarantine_path = Path(quarantine_path) if quarantine_path else None
+        self.check_nfc = check_nfc
 
     @staticmethod
-    def get_bad_rows(issues: list[DataQualityIssue]) -> set[int]:
-        """Get all row indices that have any data quality issues.
+    def get_bad_row_mask(table: pa.Table) -> pa.Array:
+        """Create a boolean mask for rows that have any data quality issues.
 
-        Args:
-            issues: List of DataQualityIssue objects
-
-        Returns:
-            Set of row indices with issues
+        This is a simplified version that uses Arrow compute to find bad rows.
         """
-        bad_rows = set()
-        for issue in issues:
-            bad_rows.update(issue.row_indices)
-        return bad_rows
+        # Start with all False (no issues)
+        bad_mask = pa.array([False] * table.num_rows, type=pa.bool_())
 
-    @staticmethod
-    def create_quarantine_filter(
-        table: pa.Table, bad_row_indices: set[int]
-    ) -> pa.Array:
-        """Create a boolean mask for rows to KEEP (excluding bad rows).
+        # For string columns, check for invalid characters and replacement characters
+        for name in table.schema.names:
+            col = table.column(name)
+            if not (pa.types.is_string(col.type) or pa.types.is_large_string(col.type)):
+                continue
 
-        Args:
-            table: PyArrow table (for row count)
-            bad_row_indices: Set of row indices to exclude
+            # Invalid characters
+            printable_mask = pc.utf8_is_printable(col)
+            bad_mask = pc.or_(bad_mask, pc.invert(printable_mask))
 
-        Returns:
-            PyArrow boolean array (True = keep, False = quarantine)
-        """
-        num_rows = table.num_rows
-        keep_mask = [i not in bad_row_indices for i in range(num_rows)]
-        return pa.array(keep_mask, type=pa.bool_())
+            # Replacement characters
+            repl_mask = pc.match_substring(col, "\ufffd")
+            bad_mask = pc.or_(bad_mask, repl_mask)
 
-    @staticmethod
-    def quarantine_bad_records(
-        table: pa.Table, bad_row_indices: set[int]
-    ) -> tuple[pa.Table, pa.Table]:
-        """Split a table into clean and bad records.
+        return bad_mask
 
-        Args:
-            table: PyArrow table to split
-            bad_row_indices: Set of row indices to quarantine
-
-        Returns:
-            Tuple of (clean_table, bad_table)
-        """
-        keep_mask = Validator.create_quarantine_filter(table, bad_row_indices)
-        clean_table = table.filter(keep_mask)
-        bad_table = table.filter(pc.invert(keep_mask))  # type: ignore
-        return clean_table, bad_table
-
-    @staticmethod
-    def get_issues_by_row(
-        issues: list[DataQualityIssue],
-    ) -> dict[int, list[DataQualityIssue]]:
-        """Group issues by row index for detailed per-row reporting.
-
-        Args:
-            issues: List of DataQualityIssue objects
-
-        Returns:
-            Dictionary mapping row index to list of issues affecting that row
-        """
-        issues_by_row: dict[int, list[DataQualityIssue]] = {}
-        for issue in issues:
-            for row_idx in issue.row_indices:
-                if row_idx not in issues_by_row:
-                    issues_by_row[row_idx] = []
-                issues_by_row[row_idx].append(issue)
-
-        # Sort each row's issues by severity
-        for row_issues in issues_by_row.values():
-            row_issues.sort(key=lambda x: x.severity != Severity.CRITICAL)
-
-        return dict(sorted(issues_by_row.items()))
-
-    @staticmethod
-    def report_issues(issues: list[DataQualityIssue]) -> None:
-        """Print a formatted report of all detected data quality issues.
-
-        Args:
-            issues: List of DataQualityIssue objects to report
-        """
-        if not issues:
-            logger.info("No data quality issues detected")
-            return
-
-        critical_count = sum(1 for i in issues if i.severity == Severity.CRITICAL)
-        warning_count = sum(1 for i in issues if i.severity == Severity.WARNING)
-        bad_rows = Validator.get_bad_rows(issues)
-
-        logger.warning(
-            "Found {} critical issue(s) and {} warning(s) affecting {} row(s)",
-            critical_count,
-            warning_count,
-            len(bad_rows),
-        )
-
-        # Build a mapping of row -> list of (issue, sample_value) tuples
-        row_issues: dict[int, list[tuple[DataQualityIssue, str]]] = {}
-        for issue in issues:
-            for row_idx, sample_val in zip(
-                issue.row_indices, issue.sample_values, strict=True
-            ):
-                if row_idx not in row_issues:
-                    row_issues[row_idx] = []
-                row_issues[row_idx].append((issue, sample_val))
-
-        # Report grouped by row, sorted by severity (critical first)
-        for row_idx in sorted(bad_rows):
-            logger.warning(f"Row {row_idx}:")
-            # Sort this row's issues: critical first, then warnings
-            row_issue_list = sorted(
-                row_issues[row_idx],
-                key=lambda x: x[0].severity != Severity.CRITICAL,
-            )
-            for issue, sample_value in row_issue_list:
-                log_level = (
-                    "ERROR" if issue.severity == Severity.CRITICAL else "WARNING"
-                )
-                msg = (
-                    f"  [{issue.severity.value}] {issue.issue_type} in column "
-                    f"'{issue.column}': {sample_value!r}"
-                )
-                logger.log(log_level, msg)
-
-    def validate(self, data: pa.Table | pa.RecordBatch) -> Iterator[pa.Table]:
+    def validate(
+        self, data: pa.Table | pa.RecordBatch
+    ) -> tuple[pa.Table, pa.Table, list[DataQualityIssue]]:
         """Validate the given PyArrow data structure for data quality issues.
 
         Args:
             data: PyArrow Table or RecordBatch to validate
 
-        Yields:
-            PyArrow Table (clean records if in quarantine mode, all records if no issues)
-
-        Raises:
-            DataQualityError: If issues are found and issue_action is 'reject'
+        Returns:
+            Tuple of (clean_table, bad_table, issues)
         """
         if isinstance(data, pa.RecordBatch):
             table = pa.Table.from_batches([data])
         else:
             table = data
 
-        match self.validator_type:
-            case "arrow":
-                issues = validate_string_columns(table)
-            case _:
-                raise TypeError(f"Unsupported validator type: {self.validator_type}")
+        issues = validate_string_columns(table, check_nfc=self.check_nfc)
 
         if not issues:
-            yield table
+            return table, table.schema.empty_table(), []
+
+        # Efficiently split table using Arrow compute
+        bad_mask = self.get_bad_row_mask(table)
+        clean_table = table.filter(pc.invert(bad_mask))
+        bad_table = table.filter(bad_mask)
+
+        return clean_table, bad_table, issues
+
+    @staticmethod
+    def report_summary(summary: ValidationSummary) -> None:
+        """Print a formatted summary of all detected issues.
+
+        Args:
+            summary: The ValidationSummary object containing accumulated results.
+        """
+        if summary.total_rows == 0:
+            logger.info("No data processed by validator.")
             return
 
-        self.report_issues(issues)
-        bad_rows = self.get_bad_rows(issues)
-        clean_table, bad_table = self.quarantine_bad_records(table, bad_rows)
-
-        if self.quarantine_path and bad_table.num_rows > 0:
-            import datetime
-
-            self.quarantine_path.mkdir(parents=True, exist_ok=True)
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-            file_path = self.quarantine_path / f"bad_records_{timestamp}.parquet"
-            pq.write_table(bad_table, file_path)
-            logger.info("Bad records written to: {}", file_path)
-
-        if self.issue_action == "reject":
-            error_msg = (
-                f"Validation failed with {len(issues)} issues affecting "
-                f"{len(bad_rows)} rows"
+        if not summary.issue_counts:
+            logger.success(
+                "✓ Data Quality Pass: No issues detected across {} rows",
+                summary.total_rows,
             )
-            raise DataQualityError(error_msg)
+            return
 
-        # quarantine mode
+        logger.warning("=" * 80)
+        logger.warning("DATA QUALITY VALIDATION SUMMARY")
+        logger.warning("=" * 80)
+        logger.warning(f"Total rows processed: {summary.total_rows}")
+        logger.warning(f"Total bad rows:       {summary.total_bad_rows}")
         logger.warning(
-            "Quarantined {} bad records. Proceeding with {} clean records.",
-            bad_table.num_rows,
-            clean_table.num_rows,
+            f"Bad row percentage:   "
+            f"{(summary.total_bad_rows / summary.total_rows * 100):.2f}%"
         )
 
-        if clean_table.num_rows > 0:
-            yield clean_table
+        logger.warning("-" * 80)
+        logger.warning("Issues by Type:")
+
+        # Sort issues by severity then count
+        sorted_issues = sorted(
+            summary.issue_counts.items(),
+            key=lambda x: (x[0].split("|")[2] != Severity.CRITICAL.value, -x[1]),
+        )
+
+        for key, count in sorted_issues:
+            issue_type, col, sev = key.split("|")
+            log_level = "ERROR" if sev == Severity.CRITICAL.value else "WARNING"
+            logger.log(
+                log_level, f"  [{sev}] {issue_type} in column '{col}': {count} rows"
+            )
+            samples = summary.samples.get(key, [])
+            if samples:
+                logger.log(log_level, f"    Samples: {samples[:3]!r}")
+
+        logger.warning("=" * 80)
+
+    @staticmethod
+    def verify_trailer(
+        summary: ValidationSummary,
+        trailer_counts: dict[str, int],
+        exclude_types: list[str] | None = None,
+    ) -> bool:
+        """Verify record counts against trailer counts.
+
+        Args:
+            summary: The ValidationSummary object.
+            trailer_counts: Expected counts from trailer.
+            exclude_types: Record types to exclude from "extra record" warnings.
+
+        Returns:
+            True if all counts match, False otherwise.
+        """
+        if not trailer_counts:
+            logger.warning("No trailer counts provided for verification.")
+            return True
+
+        exclude_types = exclude_types or []
+
+        logger.info("=" * 80)
+        logger.info("TRAILER RECORD VERIFICATION")
+        logger.info("=" * 80)
+
+        all_match = True
+        for rt, expected in trailer_counts.items():
+            actual = summary.record_counts.get(rt, 0)
+            if actual == expected:
+                logger.success(f"✓ {rt}: {actual} rows (matches trailer)")
+            else:
+                logger.error(
+                    f"✗ {rt}: {actual} rows (expected {expected} from trailer)"
+                )
+                all_match = False
+
+        # Check for extra record types in data not in trailer
+        for rt, actual in summary.record_counts.items():
+            if rt not in trailer_counts and rt not in exclude_types:
+                logger.warning(f"! {rt}: {actual} rows (not found in trailer)")
+
+        if all_match:
+            logger.success("✅ Trailer verification passed!")
+        else:
+            logger.error("✗ Trailer verification failed!")
+
+        return all_match
+
+    def raise_if_failed(self, summary: ValidationSummary) -> None:
+        """Raise DataQualityError if issues were found and action is 'reject'.
+
+        Args:
+            summary: The ValidationSummary object containing accumulated results.
+        """
+        if self.issue_action == "reject" and summary.total_bad_rows > 0:
+            raise DataQualityError(
+                f"Pipeline rejected due to {summary.total_bad_rows} "
+                f"bad rows detected during validation."
+            )

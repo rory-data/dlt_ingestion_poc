@@ -3,13 +3,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
-
-class Rules(str, Enum):
-    """Data quality validation rules."""
-
-    REPLACEMENT_CHAR = (
-        "\ufffd"  # Unicode replacement character to detect encoding issues
-    )
+# CONSTANTS
+REPLACEMENT_CHAR = "\ufffd"  # Unicode replacement character to detect encoding issues
 
 
 class Severity(Enum):
@@ -21,39 +16,18 @@ class Severity(Enum):
 
 @dataclass
 class DataQualityIssue:
-    """Represents a single data quality issue."""
+    """Represents a summary of data quality issues in a batch."""
 
     severity: Severity
     issue_type: str
     column: str
-    row_indices: list[int]
+    issue_count: int
     sample_values: list[str]
 
     def __str__(self) -> str:
         """Format issue for display."""
-        rows_str = ", ".join(map(str, self.row_indices))
         samples_str = " | ".join(repr(v) for v in self.sample_values)
         return (
             f"[{self.severity.value}] {self.issue_type} in column '{self.column}' "
-            f"at rows {rows_str}: {samples_str}"
+            f"({self.issue_count} rows affected). Samples: {samples_str}"
         )
-
-    def format_for_row(self, row_idx: int) -> str:
-        """Format issue showing only the specific row's context.
-
-        Args:
-            row_idx: The specific row index to show context for
-
-        Returns:
-            Formatted string for display
-        """
-        try:
-            row_position = self.row_indices.index(row_idx)
-            sample_value = repr(self.sample_values[row_position])
-            return (
-                f"[{self.severity.value}] {self.issue_type} in column '{self.column}': "
-                f"{sample_value}"
-            )
-        except ValueError:
-            # Row not in this issue's indices, fall back to full format
-            return str(self)

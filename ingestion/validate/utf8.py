@@ -4,8 +4,8 @@ import pyarrow as pa
 import pyarrow.compute as pc
 from loguru import logger
 
-from ingestion.validate.common import extract_issue_details, validate_arrow_structures
-from ingestion.validate.config import DataQualityIssue, Rules, Severity
+from ingestion.validate.common import extract_issue_summary, validate_arrow_structures
+from ingestion.validate.config import REPLACEMENT_CHAR, DataQualityIssue, Severity
 
 
 def _detect_replacement_characters(
@@ -20,10 +20,10 @@ def _detect_replacement_characters(
     Returns:
         List of DataQualityIssue objects with severity WARNING
     """
-    mask = pc.match_substring(column, Rules.REPLACEMENT_CHAR)  # type: ignore
-    row_indices, sample_values = extract_issue_details(column, mask)
+    mask = pc.match_substring(column, REPLACEMENT_CHAR)  # type: ignore
+    issue_count, sample_values = extract_issue_summary(column, mask)
 
-    if not row_indices:
+    if issue_count == 0:
         return []
 
     return [
@@ -31,7 +31,7 @@ def _detect_replacement_characters(
             severity=Severity.WARNING,
             issue_type="Unicode Replacement Character (U+FFFD)",
             column=column_name,
-            row_indices=row_indices,
+            issue_count=issue_count,
             sample_values=sample_values,
         )
     ]
@@ -42,10 +42,6 @@ def _detect_invalid_characters(
 ) -> list[DataQualityIssue]:
     """Detect control or non-printable characters in a column.
 
-    This combines detection of:
-    - Control characters (0x00-0x08, 0x0B-0x0C, 0x0E-0x1F, 0x7F-0x9F)
-    - Non-printable characters (including the above)
-
     Args:
         column: PyArrow column to check
         column_name: Name of the column for reporting
@@ -53,12 +49,12 @@ def _detect_invalid_characters(
     Returns:
         List of DataQualityIssue objects with severity CRITICAL
     """
-    # Detect non-printable characters (catches control chars and other invalid chars)
+    # Detect non-printable characters
     printable_mask = pc.utf8_is_printable(column)  # type: ignore
     non_printable_mask = pc.invert(printable_mask)  # type: ignore
-    row_indices, sample_values = extract_issue_details(column, non_printable_mask)
+    issue_count, sample_values = extract_issue_summary(column, non_printable_mask)
 
-    if not row_indices:
+    if issue_count == 0:
         return []
 
     return [
@@ -66,25 +62,61 @@ def _detect_invalid_characters(
             severity=Severity.CRITICAL,
             issue_type="Invalid Characters (control or non-printable)",
             column=column_name,
-            row_indices=row_indices,
+            issue_count=issue_count,
             sample_values=sample_values,
         )
     ]
 
 
-def validate_string_columns(table: pa.Table) -> list[DataQualityIssue]:
+def _detect_non_nfc_normalization(
+    column: pa.ChunkedArray, column_name: str
+) -> list[DataQualityIssue]:
+    """Detect rows that are not in NFC normalized form.
+
+    Args:
+        column: PyArrow column to check
+        column_name: Name of the column for reporting
+
+    Returns:
+        List of DataQualityIssue objects with severity WARNING
+    """
+    try:
+        # Note: This is computationally expensive.
+        normalized = pc.utf8_normalize(column, form="NFC")
+        mask = pc.not_equal(column, normalized)
+        issue_count, sample_values = extract_issue_summary(column, mask)
+
+        if issue_count == 0:
+            return []
+
+        return [
+            DataQualityIssue(
+                severity=Severity.WARNING,
+                issue_type="Non-NFC Normalization",
+                column=column_name,
+                issue_count=issue_count,
+                sample_values=sample_values,
+            )
+        ]
+    except Exception as e:
+        logger.debug(f"NFC normalization check skipped for {column_name}: {e}")
+        return []
+
+
+def validate_string_columns(
+    table: pa.Table, check_nfc: bool = False
+) -> list[DataQualityIssue]:
     """
     Validate all string columns in a PyArrow table for data quality issues.
 
     Args:
         table: PyArrow table to validate
+        check_nfc: Whether to perform expensive NFC normalization check
 
     Returns:
         List of all detected DataQualityIssue objects, sorted by severity
     """
     issues: list[DataQualityIssue] = []
-
-    logger.info("Validating all string columns for UTF-8 data quality issues")
 
     validate_arrow_structures(table)
     for name in table.schema.names:
@@ -95,6 +127,8 @@ def validate_string_columns(table: pa.Table) -> list[DataQualityIssue]:
 
         issues.extend(_detect_invalid_characters(col, name))
         issues.extend(_detect_replacement_characters(col, name))
+        if check_nfc:
+            issues.extend(_detect_non_nfc_normalization(col, name))
 
     # Sort by severity (CRITICAL first) then by column name
     issues.sort(key=lambda x: (x.severity != Severity.CRITICAL, x.column))
