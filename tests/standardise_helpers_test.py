@@ -3,10 +3,14 @@
 import polars as pl
 import pyarrow as pa
 import pytest
-from polars.testing import assert_frame_equal
 
 # Assuming the helpers module is importable, adjust path if necessary
-from helpers.generic import clean_data, clean_string_columns, coerce_arrow_string_type
+from helpers.standardise import (
+    clean_data,
+    clean_string_columns,
+    coerce_arrow_string_type,
+)
+from polars.testing import assert_frame_equal
 
 # --- Test Data Fixtures ---
 
@@ -24,7 +28,13 @@ def sample_df_mixed_types() -> pl.DataFrame:
                 "David\u000c",  # Form feed control char
                 "Eve\u00e9",  # e with acute accent (precomposed)
             ],
-            "city": ["New York ", " London", "Paris\r", None, "Berlin\u0065\u0301"],  # e + combining acute
+            "city": [
+                "New York ",
+                " London",
+                "Paris\r",
+                None,
+                "Berlin\u0065\u0301",
+            ],  # e + combining acute
             "value": [10.5, 20.0, 15.5, 30.0, 25.5],
             "active": [True, False, True, False, True],
         }
@@ -37,8 +47,12 @@ def expected_df_cleaned() -> pl.DataFrame:
     return pl.DataFrame(
         {
             "id": pl.Series([1, 2, 3, 4, 5], dtype=pl.Int64),
-            "name": pl.Series(["Alice", "Bob", "Charlie", "David", "Eve\u00e9"], dtype=pl.Utf8),
-            "city": pl.Series(["New York", "London", "Paris", None, "Berlin\u00e9"], dtype=pl.Utf8),  # Normalised
+            "name": pl.Series(
+                ["Alice", "Bob", "Charlie", "David", "Eve\u00e9"], dtype=pl.Utf8
+            ),
+            "city": pl.Series(
+                ["New York", "London", "Paris", None, "Berlin\u00e9"], dtype=pl.Utf8
+            ),  # Normalised
             "value": pl.Series([10.5, 20.0, 15.5, 30.0, 25.5], dtype=pl.Float64),
             "active": pl.Series([True, False, True, False, True], dtype=pl.Boolean),
         }
@@ -124,7 +138,9 @@ def test_clean_string_columns_no_strings(df_no_strings):
 
 def test_clean_string_columns_empty():
     """Test cleaning on an empty DataFrame."""
-    df_empty = pl.DataFrame({"a": pl.Series([], dtype=pl.Utf8), "b": pl.Series([], dtype=pl.Int64)})
+    df_empty = pl.DataFrame(
+        {"a": pl.Series([], dtype=pl.Utf8), "b": pl.Series([], dtype=pl.Int64)}
+    )
     df_cleaned = clean_string_columns(df_empty)
     assert_frame_equal(df_cleaned, df_empty)
 
@@ -171,7 +187,9 @@ def test_coerce_arrow_string_type_no_strings(arrow_table_no_strings):
 
 def test_coerce_arrow_string_type_empty():
     """Test schema coercion on an empty table."""
-    empty_df = pl.DataFrame({"a": pl.Series([], dtype=pl.Utf8), "b": pl.Series([], dtype=pl.Int64)})
+    empty_df = pl.DataFrame(
+        {"a": pl.Series([], dtype=pl.Utf8), "b": pl.Series([], dtype=pl.Int64)}
+    )
     # No need for original_schema variable
     coerced_schema = coerce_arrow_string_type(empty_df)
     # Even if empty, the schema types should be correct (pa.string for Utf8)
@@ -216,7 +234,9 @@ def test_clean_data_no_strings(arrow_table_no_strings):
 
 def test_clean_data_empty():
     """Test clean_data with an empty table."""
-    empty_schema = pa.schema([pa.field("col_str", pa.string()), pa.field("col_int", pa.int64())])
+    empty_schema = pa.schema(
+        [pa.field("col_str", pa.string()), pa.field("col_int", pa.int64())]
+    )
     empty_arrow_table = pa.Table.from_pylist([], schema=empty_schema)
     cleaned_table = clean_data(empty_arrow_table)
     assert cleaned_table.num_rows == 0

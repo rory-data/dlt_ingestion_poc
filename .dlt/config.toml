@@ -1,13 +1,29 @@
 [runtime]
-log_level="INFO"  # the system log level of dlt
+log_level = "INFO"       # the system log level of dlt
 dlthub_telemetry = false
 
+# Settings for destination capabilities =============
+
 [destination.filesystem]
+bucket_url = "/Users/rory/github/dlt_ingestion_poc/data/output"
 kwargs = '{"auto_mkdir": true}'
 
-[sources.data_writer]
-file_format = "parquet"
+[destination.filesystem.parquet]
+compression = "snappy"
+version = "2.6"        # Explicit version for compatibility
+
+# Settings for data extraction and normalisation =============
+
+[extract.data_writer]
+file_max_bytes = 134_217_728 # 128 MB
+file_max_items = 100_000     # Reduced from 250k to avoid file splits
+
+[normalize]
+start_method = "spawn" # Required on macOS
 
 [normalize.data_writer]
-file_max_items=1000000
-file_max_bytes=1000000
+file_max_bytes = 134_217_728 # 128 MB
+file_max_items = 100_000     # Reduced from 250k to avoid file splits
+
+[load]
+file_max_items = 0 # Ensure only one destination object is created per resource

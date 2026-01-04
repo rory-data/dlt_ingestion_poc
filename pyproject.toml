@@ -1,7 +1,7 @@
 [project]
 name = "dlt-ingestion-poc"
 version = "0.0.1"
-description = "This is a project for experimentation using dlt for data ingestion in an ETL pipeline."
+description = "This is a project for experimentation using dlt for data ingestion in a data pipeline."
 authors = [{ name = "Rory Purcell-Hewitt" }]
 readme = "README.md"
 keywords = ['python']
@@ -15,23 +15,27 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "dlt[duckdb,filesystem,sql-database]>=1.9.0",
+    "datamodel-code-generator>=0.30.0",
+    "dlt[duckdb,filesystem,sql_database,workspace]>=1.9.0",
     "duckdb>=1.2.1",
     "duckdb-engine>=0.17.0",
-    "faker>=37.1.0",
     "ibis-framework[duckdb,polars]>=10.3",
     "polars>=1.26.0",
     "pyarrow>=19.0.1",
+    "loguru>=0.7.3",
 ]
 
 [dependency-groups]
 dev = [
+    "memray>=1.19.1",
     "pytest>=7.2.0",
-    "pre-commit>=2.20.0",
-    "mypy>=0.991",
+    "pytest-cookies>=0.6.1",
     "pytest-cov>=4.0.0",
+    "faker>=37.1.0",
     "ruff>=0.9.2",
-    "scalene>=1.4.0",
+    "ty>=0.0.7",
+    "types-pyyaml>=6.0.12.20241230",
+    "prek>=0.2.25",
 ]
 
 [tool.uv]
@@ -39,7 +43,7 @@ package = false
 
 [tool.ruff]
 target-version = "py312"
-line-length = 120
+line-length = 88
 fix = true
 
 [tool.ruff.lint]
@@ -50,7 +54,6 @@ select = [
     "C4",  # flake8-comprehensions
     "C90", # mccabe
     "D",   # pydocstyle
-    "DTZ", # datetime timezones
     "E",   # pycodestyle errors
     "F",   # pyflakes
     "I",   # isort
@@ -64,7 +67,6 @@ select = [
     "W",   # pycodestyle warnings
 ]
 ignore = [
-    "C901", # complex-structure (mccabe)
     "D203", # one-blank-line-before-class (conflicts with D211)
     "D212", # multi-line-summary-first-line (conflicts with D213)
     "E501", # line-too-long
@@ -82,55 +84,27 @@ skip-magic-trailing-comma = false  # like Black, respect magic trailing commas.
 line-ending = "auto"  # like Black, automatically detect the appropriate line ending.
 docstring-code-format = false
 docstring-code-line-length = "dynamic"
-
+ 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"] # unused import in __init__ files
 "tests/*" = ["S101", "ANN", "S603"] # assert usage and type annotations in tests
+"test_foo.py" = ["S101", "ANN"] # assert usage and type annotations in test_foo.py
 "conftest.py" = [
     "S101",
     "ANN",
 ] # assert usage and type annotations in pytest config
-
+ 
 [tool.ruff.lint.isort]
-known-first-party = ["dlt-ingestion-poc"]
 known-third-party = ["pytest", "requests"]
-
+ 
 [tool.ruff.lint.pydocstyle]
 convention = "google" # Use Google-style docstrings
 
-[tool.mypy]
-# match your Python runtime
-python_version = "py312"
-# Core rules and reporting
-warn_redundant_casts = true  # Highlight redundant casting
-warn_unused_ignores = true  # Flag unnecessary type: ignores
-show_error_codes = true  # Enable error code diagnostics
-
-# Additional reporting configuration
-show_column_numbers = true  # Better error location
-pretty = true  # Use visually nicer output in error messages
-
-# Additional rules
-disallow_untyped_decorators = false  # Allow untyped decorators
-disallow_untyped_defs = true  # Require type annotations on defs
-check_untyped_defs = true  # Type-checks the interior of functions without type annotations
-disallow_incomplete_defs = true  # No partial annotations
-strict_optional = true  # Disable checking of optional types and `None` values
-no_implicit_optional = true  # Explicit Optional[] for None values
-strict_equality = true  # Prevent non-sensical comparisons
-warn_unreachable = true  # Warn for dead-end code
-
-# Per-module or directory options
-[[tool.mypy.overrides]]
-module = ["tests.*"]
-disallow_untyped_defs = false  # Don't require type annotations on defs
-warn_unused_ignores = false  # Don't flag unnecessary type: ignores
-
-[[tool.mypy.overrides]]
-module = [
-    "airflow.*",
-    "pyarrow.*",
-    "pytest.*",
-    "setuptools.*",
-]
-ignore_missing_imports = true  # Suppress import errors that cannot be resolved
+[tool.ty.src]
+include = [".", "ingestion", "tests"]
+ 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+python_classes = "Test*"

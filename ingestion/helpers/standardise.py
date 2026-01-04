@@ -9,7 +9,9 @@ import pyarrow as pa
 # Configure logging
 # It's generally recommended to configure logging at the application entry point,
 # but placing it here for simplicity in this module context.
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -39,10 +41,14 @@ def clean_data(arrow_data: pa.Table) -> pa.Table:
 
     # Check if any string columns exist to potentially skip conversion
     if not any(
-        pa.types.is_string(field.type) or pa.types.is_large_string(field.type) or pa.types.is_string_view(field.type)
+        pa.types.is_string(field.type)
+        or pa.types.is_large_string(field.type)
+        or pa.types.is_string_view(field.type)
         for field in arrow_data.schema
     ):
-        logger.info("No string-like columns found in the input table. Skipping cleaning.")
+        logger.info(
+            "No string-like columns found in the input table. Skipping cleaning."
+        )
         return arrow_data
 
     try:
@@ -52,18 +58,24 @@ def clean_data(arrow_data: pa.Table) -> pa.Table:
 
         # Apply cleaning operations to all string columns
         df_cleaned = clean_string_columns(df)
-        logger.debug("String columns cleaned successfully. Shape remains: %s", df_cleaned.shape)
+        logger.debug(
+            "String columns cleaned successfully. Shape remains: %s", df_cleaned.shape
+        )
 
         schema = coerce_arrow_string_type(df_cleaned)
 
         return pa.table(df_cleaned, schema=schema)
 
     except pl.PolarsError as e:
-        logger.error("A Polars error occurred during data cleaning: %s", e, exc_info=True)
+        logger.error(
+            "A Polars error occurred during data cleaning: %s", e, exc_info=True
+        )
         # Re-raise the specific Polars error
         raise e
     except Exception as e:
-        logger.error("An unexpected error occurred during data cleaning: %s", e, exc_info=True)
+        logger.error(
+            "An unexpected error occurred during data cleaning: %s", e, exc_info=True
+        )
         # Re-raise the caught exception
         raise e
 
@@ -91,8 +103,19 @@ def coerce_arrow_string_type(df: pl.DataFrame) -> pa.Schema:
     for field in original_schema:
         # Check if it's any Arrow string-like type that isn't already pa.string()
         if pa.types.is_large_string(field.type) or pa.types.is_string_view(field.type):
-            logger.debug("Modifying schema for column '%s' from %s to pa.string()", field.name, field.type)
-            modified_fields.append(pa.field(field.name, pa.string(), nullable=field.nullable, metadata=field.metadata))
+            logger.debug(
+                "Modifying schema for column '%s' from %s to pa.string()",
+                field.name,
+                field.type,
+            )
+            modified_fields.append(
+                pa.field(
+                    field.name,
+                    pa.string(),
+                    nullable=field.nullable,
+                    metadata=field.metadata,
+                )
+            )
             needs_schema_change = True
         elif pa.types.is_string(field.type):
             # Already pa.string(), keep as is
@@ -102,10 +125,14 @@ def coerce_arrow_string_type(df: pl.DataFrame) -> pa.Schema:
             modified_fields.append(field)
 
     if needs_schema_change:
-        logger.debug("Created final Arrow schema enforcing pa.string() for string columns.")
+        logger.debug(
+            "Created final Arrow schema enforcing pa.string() for string columns."
+        )
         return pa.schema(modified_fields)
     else:
-        logger.debug("No schema modification needed. Returning table with original Arrow types (post-cleaning).")
+        logger.debug(
+            "No schema modification needed. Returning table with original Arrow types (post-cleaning)."
+        )
         return original_schema
 
 
