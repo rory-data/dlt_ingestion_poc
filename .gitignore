@@ -1,6 +1,7 @@
 files/
 .draft/
 data/
+experiments/
 
 .ruff_cache/
 docs/source

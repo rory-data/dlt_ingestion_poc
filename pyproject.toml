@@ -15,14 +15,13 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "datamodel-code-generator>=0.30.0",
     "dlt[duckdb,filesystem,sql_database,workspace]>=1.9.0",
     "duckdb>=1.2.1",
     "duckdb-engine>=0.17.0",
     "ibis-framework[duckdb,polars]>=10.3",
-    "polars>=1.26.0",
-    "pyarrow>=19.0.1",
+    "pyarrow>=22.0.0",
     "loguru>=0.7.3",
+    "datacontract-cli>=0.11.3",
 ]
 
 [dependency-groups]

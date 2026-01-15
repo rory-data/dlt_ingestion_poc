@@ -2,10 +2,13 @@
 
 import random
 import string
-from datetime import datetime
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
+from faker import Faker
 from loguru import logger
+
+fake = Faker("en_NZ")
 
 
 def generate_random_string(max_length: int, optional: bool = True) -> str:
@@ -24,167 +27,199 @@ def generate_random_string(max_length: int, optional: bool = True) -> str:
     return "".join(random.choices(chars, k=length))
 
 
-def generate_record_9001() -> str:
-    """Generate record type 9001 with 96 columns."""
-    record_type = "9001"
+def generate_record_9001(account_id: str) -> str:
+    """Generate record type 9001 (Agreement) with 96 columns."""
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
 
-    # Mix of different length fields
-    # 8 long fields (max 255), rest shorter
-    fields = []
-    for i in range(96):
+    record_type = "9001"
+    fields = [
+        account_id,
+        fake.bs(),
+        fake.catch_phrase(),
+        fake.date_this_century().isoformat(),
+        str(fake.boolean()),
+    ]
+
+    for i in range(96 - len(fields)):
         if i < 8:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
-            # Shorter fields with varying lengths
             max_len = random.choice([10, 20, 50, 100])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
-def generate_record_9002() -> str:
-    """Generate record type 9002 with 60 columns."""
+def generate_record_9002(account_id: str) -> str:
+    """Generate record type 9002 (Account Master) with 60 columns."""
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
+
     record_type = "9002"
+    fields = [
+        account_id,
+        fake.aba(),
+        fake.currency_code(),
+        str(fake.random_int(min=1000, max=1000000)),
+        fake.date_this_decade().isoformat(),
+        fake.company(),
+    ]
 
-    fields = []
-    for i in range(60):
+    for i in range(60 - len(fields)):
         if i < 5:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
             max_len = random.choice([10, 30, 50])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
-def generate_record_9004() -> str:
+def generate_record_9004(account_id: str) -> str:
     """Generate record type 9004 with 36 columns."""
-    record_type = "9004"
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
 
-    fields = []
-    for i in range(36):
+    record_type = "9004"
+    fields = [account_id, fake.credit_card_number(), fake.credit_card_provider()]
+
+    for i in range(36 - len(fields)):
         if i < 3:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
             max_len = random.choice([10, 25, 50])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
-def generate_record_9005() -> str:
+def generate_record_9005(account_id: str) -> str:
     """Generate record type 9005 with 16 columns."""
-    record_type = "9005"
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
 
-    fields = []
-    for i in range(16):
+    record_type = "9005"
+    fields = [account_id, fake.swift()]
+
+    for i in range(16 - len(fields)):
         if i < 2:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
             max_len = random.choice([10, 20, 40])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
-def generate_record_9006() -> str:
-    """Generate record type 9006 with 21 columns."""
+def generate_record_9006(customer_id: str, account_id: str) -> str:
+    """Generate record type 9006 (Customer-Account Bridge) with 21 columns."""
+    if not customer_id:
+        raise ValueError("PK field 'customer_id' cannot be null")
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
+
     record_type = "9006"
+    fields = [customer_id, account_id, fake.job()]
 
-    fields = []
-    for i in range(21):
+    for i in range(21 - len(fields)):
         if i < 2:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
             max_len = random.choice([10, 20, 30])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
-def generate_record_9009() -> str:
+def generate_record_9009(account_id: str) -> str:
     """Generate record type 9009 with 34 columns."""
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
+
     record_type = "9009"
+    fields = [account_id, fake.phone_number()]
 
-    fields = []
-    for i in range(34):
+    for i in range(34 - len(fields)):
         if i < 3:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
             max_len = random.choice([10, 25, 50])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
-def generate_record_9012() -> str:
+def generate_record_9012(account_id: str) -> str:
     """Generate record type 9012 with 37 columns."""
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
+
     record_type = "9012"
+    fields = [account_id, fake.file_name(extension="pdf")]
 
-    fields = []
-    for i in range(37):
+    for i in range(37 - len(fields)):
         if i < 3:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
             max_len = random.choice([10, 25, 50])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
-def generate_record_9019() -> str:
+def generate_record_9019(account_id: str) -> str:
     """Generate record type 9019 with 27 columns."""
-    record_type = "9019"
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
 
-    fields = []
-    for i in range(27):
+    record_type = "9019"
+    fields = [account_id, fake.city(), fake.country()]
+
+    for i in range(27 - len(fields)):
         if i < 3:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
             max_len = random.choice([10, 25, 50])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
-def generate_record_9020() -> str:
+def generate_record_9020(account_id: str) -> str:
     """Generate record type 9020 with 21 columns."""
-    record_type = "9020"
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
 
-    fields = []
-    for i in range(21):
+    record_type = "9020"
+    fields = [account_id, fake.color_name()]
+
+    for i in range(21 - len(fields)):
         if i < 2:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
             max_len = random.choice([10, 20, 30])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
-def generate_record_9031() -> str:
+def generate_record_9031(account_id: str) -> str:
     """Generate record type 9031 with 39 columns."""
-    record_type = "9031"
+    if not account_id:
+        raise ValueError("PK field 'account_id' cannot be null")
 
-    fields = []
-    for i in range(39):
+    record_type = "9031"
+    fields = [account_id, fake.email()]
+
+    for i in range(39 - len(fields)):
         if i < 3:
-            # Long fields
             fields.append(generate_random_string(255))
         else:
             max_len = random.choice([10, 25, 50, 75])
             fields.append(generate_random_string(max_len))
 
-    return record_type + "|" + "|".join(fields)
+    return f"{record_type}|{'|'.join(fields)}"
 
 
 def generate_multi_layout_file(
@@ -197,7 +232,6 @@ def generate_multi_layout_file(
         master_9002_count: Number of 9002 records (master count that others scale from)
     """
     # Define proportions relative to 9002 (based on 500k reference)
-    # 9002 is the master, others are relative proportions
     PROPORTIONS = {
         "9001": 1.0,  # 500k / 500k
         "9002": 1.0,  # master
@@ -217,14 +251,43 @@ def generate_multi_layout_file(
         for rt, proportion in PROPORTIONS.items()
     }
 
-    total_records = sum(target_counts.values())
+    # Generate IDs
+    account_ids = [f"{i:010d}" for i in range(1, master_9002_count + 1)]
+    # Assume 80% customer-to-account ratio for realistic bridge data
+    num_customers = max(1, int(master_9002_count * 0.8))
+    customer_ids = [f"{i:010d}" for i in range(1, num_customers + 1)]
+
+    # Build list of records to generate with their assigned IDs
+    records_to_generate = []
+
+    # 1. Account Masters (9002) and Agreements (9001) - 1:1 mapping
+    for aid in account_ids:
+        records_to_generate.append(("9002", (aid,)))
+        records_to_generate.append(("9001", (aid,)))
+
+    # 2. Customer-Account Bridge (9006)
+    for _ in range(target_counts["9006"]):
+        cid = random.choice(customer_ids)
+        aid = random.choice(account_ids)
+        records_to_generate.append(("9006", (cid, aid)))
+
+    # 3. All other relational record types
+    relational_rts = ["9004", "9005", "9009", "9012", "9019", "9020", "9031"]
+    for rt in relational_rts:
+        for _ in range(target_counts[rt]):
+            aid = random.choice(account_ids)
+            records_to_generate.append((rt, (aid,)))
+
+    total_records = len(records_to_generate)
     logger.info(
         "Starting data generation: {:,} total records (master 9002 count: {:,})",
         total_records,
         master_9002_count,
     )
 
-    # Record type generators
+    random.shuffle(records_to_generate)
+
+    # Record type generators mapping
     generators = {
         "9001": generate_record_9001,
         "9002": generate_record_9002,
@@ -238,19 +301,13 @@ def generate_multi_layout_file(
         "9031": generate_record_9031,
     }
 
-    # Build list of records to generate (shuffled for realistic distribution)
-    records_to_generate = []
-    for record_type, count in target_counts.items():
-        records_to_generate.extend([record_type] * count)
-
-    random.shuffle(records_to_generate)
-
     # Track actual counts for trailer
     record_counts = dict.fromkeys(generators.keys(), 0)
 
     # Get file info for header
     filename = Path(output_path).name
-    created_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # ISO 8601 format for UTC
+    created_datetime = datetime.now(UTC).isoformat(timespec="seconds")
 
     with open(output_path, "w", encoding="utf-8") as f:
         # Write header record
@@ -258,9 +315,9 @@ def generate_multi_layout_file(
         f.write(header + "\n")
 
         # Generate data records
-        for i, record_type in enumerate(records_to_generate, 1):
+        for i, (record_type, id_args) in enumerate(records_to_generate, 1):
             generator = generators[record_type]
-            record = generator()
+            record = generator(*id_args)
             f.write(record + "\n")
             record_counts[record_type] += 1
 
@@ -298,6 +355,6 @@ if __name__ == "__main__":
     # Generate the file
     # Adjust master_9002_count to scale all other record types proportionally
     generate_multi_layout_file(
-        output_path="multi_layout_data_prd.txt",
+        output_path="data/input/multi_layout_data_prd.txt",
         master_9002_count=200,  # Change this to scale all record types
     )

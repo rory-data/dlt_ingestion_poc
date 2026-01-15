@@ -3,9 +3,6 @@
 from dataclasses import dataclass
 from enum import Enum
 
-# CONSTANTS
-REPLACEMENT_CHAR = "\ufffd"  # Unicode replacement character to detect encoding issues
-
 
 class Severity(Enum):
     """Data quality issue severity levels."""
