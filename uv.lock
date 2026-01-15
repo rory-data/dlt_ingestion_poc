@@ -612,6 +612,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "faker" },
+    { name = "hypothesis" },
     { name = "memray" },
     { name = "prek" },
     { name = "pytest" },
@@ -636,6 +637,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "faker", specifier = ">=37.1.0" },
+    { name = "hypothesis", specifier = ">=6.92.0" },
     { name = "memray", specifier = ">=1.19.1" },
     { name = "prek", specifier = ">=0.2.25" },
     { name = "pytest", specifier = ">=7.2.0" },
@@ -915,6 +917,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ba/66/a3921783d54be8a6870ac4ccffcd15c4dc0dd7fcce51c6d63b8c63935276/humanize-4.15.0.tar.gz", hash = "sha256:1dd098483eb1c7ee8e32eb2e99ad1910baefa4b75c3aff3a82f4d78688993b10", size = 83599 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c5/7b/bca5613a0c3b542420cf92bd5e5fb8ebd5435ce1011a091f66bb7693285e/humanize-4.15.0-py3-none-any.whl", hash = "sha256:b1186eb9f5a9749cd9cb8565aee77919dd7c8d076161cf44d70e59e3301e1769", size = 132203 },
+]
+
+[[package]]
+name = "hypothesis"
+version = "6.150.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sortedcontainers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d2/19/a4eee0c98e2ec678854272f79646f34943f8fbbc42689cc355b530c5bc96/hypothesis-6.150.2.tar.gz", hash = "sha256:deb043c41c53eaf0955f4a08739c2a34c3d8040ee3d9a2da0aa5470122979f75", size = 475250 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/5e/21caad4acf45db7caf730cca1bc61422283e4c4e841efbc862d17ab81a21/hypothesis-6.150.2-py3-none-any.whl", hash = "sha256:648d6a2be435889e713ba3d335b0fb5e7a250f569b56e6867887c1e7a0d1f02f", size = 542712 },
 ]
 
 [[package]]
@@ -2407,6 +2421,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/c5/a4cf91f1b0592a11b9435cd8743fd39d04b96528b90f50f41326f1957bae/soda_core_duckdb-3.3.20.tar.gz", hash = "sha256:edfcbba24f375a6a34885842865790f0a2e907d9abe21cef3e95e28a5f747a56", size = 7425 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cb/de/995ba3804f53d508556ea2d6756eed45079346fab7d3f31ccfd6bd730026/soda_core_duckdb-3.3.20-py3-none-any.whl", hash = "sha256:65275a41c2c49dd995c7bd6d2ce7adadc5d74a4727538e268720f6b811a87a3e", size = 7491 },
+]
+
+[[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/c4/ba2f8066cceb6f23394729afe52f3bf7adec04bf9ed2c820b39e19299111/sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88", size = 30594 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0", size = 29575 },
 ]
 
 [[package]]

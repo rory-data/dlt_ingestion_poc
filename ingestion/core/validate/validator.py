@@ -42,8 +42,8 @@ class ArrowValidator:
         Uses Arrow compute functions to find rows with invalid characters
         or replacement characters.
         """
-        # Start with all False (no issues) using a constant scalar broadcasted to the table size
-        bad_mask = pa.array([False], type=pa.bool_()).repeat(table.num_rows)
+        # Start with all False (no issues) using a constant scalar repeated to the table size
+        bad_mask = pa.repeat(pa.scalar(False, type=pa.bool_()), table.num_rows)
 
         # For string columns, check for invalid characters and replacement characters
         for name in table.schema.names:
@@ -137,7 +137,9 @@ class ArrowValidator:
                 )
             else:
                 bad_data = bad_batches[0]
-        return clean_data, bad_data, issues
+            return clean_data, bad_data, issues
+
+        return clean_table, bad_table, issues
 
     @staticmethod
     def report_summary(summary: ValidationSummary) -> None:

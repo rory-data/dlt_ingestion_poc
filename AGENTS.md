@@ -72,7 +72,7 @@ Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructi
 - Follow Markdown standards from `instructions/language/markdown.instructions.md`
 - Use sentence case for headings (except main title)
 - Keep documentation concise and actionable
-- Do not create a summarry document of any agent changes unless specifcally instructed
+- Do not create a summary document of any agent changes unless specifically instructed
 
 ## Testing Instructions
 
@@ -80,9 +80,10 @@ Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructi
 - Add or update tests for any code changes
 - Use pytest with proper fixture management and mocking
 - Mock external dependencies at appropriate levels
-- Ensure mocks include specs where appropriate
+- Ensure the use of mocks e.g. `MagicMock()` includes specs as per best practice
 - Test happy paths, edge cases, and error conditions
 - Validate test coverage and ensure meaningful assertions
+- Refer to [the relevant loguru guide](https://loguru.readthedocs.io/en/stable/resources/migration.html#replacing-caplog-fixture-from-pytest-library) for replacing pytest's `caplog`
 
 ## Code Quality Standards
 
@@ -98,6 +99,8 @@ Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructi
 
 - Check README.md and CONTRIBUTING.md for project-specific setup instructions
 - Use uv-managed virtual environments for Python projects
+- Use Astral's `ruff` for linting and formatting
+- Use Astral's `ty` for typing
 - Install dependencies before making changes
 
 ### Terminal Interactions
@@ -106,9 +109,9 @@ Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructi
 
 ### Testing
 
-- Python: `pytest` or `pytest -v` for verbose output
-- Run specific tests: `pytest -k "test_name_pattern"`
-- Check coverage: `pytest --cov=module_name`
+- Python: `uv run pytest` or `uv run pytest -v` for verbose output
+- Run specific tests: `uv run pytest -k "test_name_pattern"`
+- Check coverage: `uv run pytest --cov=module_name`
 
 ### Code Quality
 

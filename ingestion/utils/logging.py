@@ -20,8 +20,14 @@ import sys
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from loguru import Record, logger
+from loguru import logger
+
+if TYPE_CHECKING:
+    from loguru import Record
+else:
+    Record = Any
 
 # Context variables for structured logging
 _batch_id: ContextVar[str | None] = ContextVar("batch_id", default=None)

@@ -26,6 +26,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.92.0",
     "memray>=1.19.1",
     "pytest>=7.2.0",
     "pytest-cookies>=0.6.1",
