@@ -5,7 +5,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from ingestion.engines.pipeline.transformers import (
+from ingestion.engines.dlt.transformers import (
     cast_single_column,
     create_casted_table,
 )
@@ -32,7 +32,7 @@ def test_create_casted_table():
 
 def test_drop_first_column(sample_arrow_table):
     """Test dropping the first column."""
-    from ingestion.engines.pipeline.transformers import drop_first_column
+    from ingestion.engines.dlt.transformers import drop_first_column
 
     dropped = drop_first_column(sample_arrow_table)
     assert dropped.num_columns == 2
@@ -41,7 +41,7 @@ def test_drop_first_column(sample_arrow_table):
 
 def test_drop_first_column_error():
     """Test error when dropping from single-column table."""
-    from ingestion.engines.pipeline.transformers import drop_first_column
+    from ingestion.engines.dlt.transformers import drop_first_column
 
     table = pa.table({"a": [1]})
     with pytest.raises(ValueError, match="only one column"):
@@ -50,7 +50,7 @@ def test_drop_first_column_error():
 
 def test_select_and_rename_columns(sample_arrow_table):
     """Test selecting and renaming."""
-    from ingestion.engines.pipeline.transformers import select_and_rename_columns
+    from ingestion.engines.dlt.transformers import select_and_rename_columns
 
     target_names = ["NAME", "AGE"]
     result = select_and_rename_columns(sample_arrow_table, target_names)
@@ -60,7 +60,7 @@ def test_select_and_rename_columns(sample_arrow_table):
 
 def test_standardise_string_column():
     """Test trimming."""
-    from ingestion.engines.pipeline.transformers import standardise_string_column
+    from ingestion.engines.dlt.transformers import standardise_string_column
 
     arr = pa.array(["  hello  ", "  world  "])
     standardised = standardise_string_column(arr)
@@ -71,7 +71,7 @@ def test_standardise_string_column():
 
 def test_cast_columns_to_dlt_types(sample_arrow_table):
     """Test full table casting to dlt types."""
-    from ingestion.engines.pipeline.transformers import cast_columns_to_dlt_types
+    from ingestion.engines.dlt.transformers import cast_columns_to_dlt_types
 
     schema_cols = [
         {"name": "name", "data_type": "text"},

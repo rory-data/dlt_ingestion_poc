@@ -2,6 +2,7 @@
 
 import sys
 from collections.abc import Callable
+from enum import Enum
 from pathlib import Path
 from typing import Any, Literal
 
@@ -9,11 +10,17 @@ import dlt
 from loguru import logger
 
 from ingestion.core.reporting.state import (
-    get_validation_summary,
     log_validation_summary,
 )
 from ingestion.core.validate.validator import ArrowValidator
 from ingestion.schema.odcs import get_dlt_schemas
+
+from .state import get_validation_summary
+
+
+class RunMode(str, Enum):
+    EXTRACT = "extract"
+    REPLAY = "replay"
 
 
 def validate_source_file(file_path: Path | str) -> Path:

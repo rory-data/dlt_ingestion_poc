@@ -6,7 +6,7 @@ import pytest
 from ingestion.core.reporting.config import Severity
 from ingestion.core.reporting.validation import DataQualityError, ValidationSummary
 from ingestion.core.validate.utf8 import validate_string_columns
-from ingestion.core.validate.validator import ArrowValidator
+from ingestion.core.validate.validator import ArrowValidator, UTF8Validator
 
 
 def test_validate_string_columns_clean(sample_arrow_table):
@@ -33,36 +33,36 @@ def test_validate_string_columns_bad(table_with_bad_data):
 
 def test_arrow_validator_split_clean_only(sample_arrow_table):
     """Test validator when all data is clean."""
-    validator = ArrowValidator(issue_action="reject")
-    clean, bad, issues = validator.validate(sample_arrow_table)
+    validator = UTF8Validator(issue_action="reject")
+    result = validator.validate(sample_arrow_table)
 
-    assert clean.num_rows == 3
-    assert bad.num_rows == 0
-    assert len(issues) == 0
+    assert result.clean_row_count == 3
+    assert result.bad_row_count == 0
+    assert result.is_valid
 
 
 def test_arrow_validator_split_mixed(table_with_bad_data):
     """Test validator splitting clean and bad rows."""
-    validator = ArrowValidator(issue_action="quarantine")
-    clean, bad, issues = validator.validate(table_with_bad_data)
+    validator = UTF8Validator(issue_action="quarantine")
+    result = validator.validate(table_with_bad_data)
 
     # Row 0: "Clean" -> clean
     # Row 1: "Replacement\ufffd" -> bad
     # Row 2: "Control\x07" -> bad
-    assert clean.num_rows == 1
-    assert bad.num_rows == 2
-    assert len(issues) == 2
-    assert clean.column("text")[0].as_py() == "Clean"
+    assert result.clean_row_count == 1
+    assert result.bad_row_count == 2
+    assert len(result.issues) == 2
+    assert result.clean_data.column("text")[0].as_py() == "Clean"
 
 
 def test_arrow_validator_record_batch_support(sample_record_batch):
     """Test validator with RecordBatch input."""
-    validator = ArrowValidator()
-    clean, bad, _issues = validator.validate(sample_record_batch)
+    validator = UTF8Validator()
+    result = validator.validate(sample_record_batch)
 
-    assert isinstance(clean, pa.RecordBatch)
-    assert isinstance(bad, pa.RecordBatch)
-    assert clean.num_rows == 3
+    assert isinstance(result.clean_data, pa.RecordBatch)
+    assert isinstance(result.bad_data, pa.RecordBatch)
+    assert result.clean_row_count == 3
 
 
 @pytest.mark.parametrize(
@@ -75,8 +75,8 @@ def test_arrow_validator_record_batch_support(sample_record_batch):
 def test_arrow_validator_action_behavior(
     table_with_bad_data, issue_action, should_raise
 ):
-    """Test that ArrowValidator.raise_if_failed behaves correctly based on issue_action."""
-    validator = ArrowValidator(issue_action=issue_action)
+    """Test that UTF8Validator raises errors based on issue_action."""
+    validator = UTF8Validator(issue_action=issue_action)
     summary = ValidationSummary(
         total_rows=3,
         total_bad_rows=2,
@@ -97,22 +97,22 @@ def test_arrow_validator_verify_trailer():
     summary.record_counts = {"10": 100, "20": 50}
 
     trailer_counts = {"10": 100, "20": 50}
-    assert ArrowValidator.verify_trailer(summary, trailer_counts) is True
+    assert UTF8Validator.verify_trailer(summary, trailer_counts) is True
 
     bad_trailer_counts = {"10": 100, "20": 49}
-    assert ArrowValidator.verify_trailer(summary, bad_trailer_counts) is False
+    assert UTF8Validator.verify_trailer(summary, bad_trailer_counts) is False
 
 
 def test_arrow_validator_empty_data():
     """Test validator with empty table."""
     schema = pa.schema([("a", pa.string())])
     table = schema.empty_table()
-    validator = ArrowValidator()
-    clean, bad, issues = validator.validate(table)
+    validator = UTF8Validator()
+    result = validator.validate(table)
 
-    assert clean.num_rows == 0
-    assert bad.num_rows == 0
-    assert len(issues) == 0
+    assert result.clean_row_count == 0
+    assert result.bad_row_count == 0
+    assert result.is_valid
 
 
 def test_arrow_validator_report_summary(caplog):

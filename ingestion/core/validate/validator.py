@@ -9,137 +9,236 @@ from pyarrow import compute as pc
 from ingestion.core.reporting.config import DataQualityIssue, Severity
 from ingestion.core.reporting.validation import DataQualityError, ValidationSummary
 
+from .base import ValidationResult, Validator
 from .utf8 import validate_string_columns
 
+# ============================================================================
+# PURE FUNCTIONS (Functional Core)
+# ============================================================================
 
-class ArrowValidator:
-    """Data quality validator for Arrow-related data structures.
 
-    This class is stateless and focused on Arrow-based validation.
+def _get_bad_row_mask(table: pa.Table) -> pa.Array:
+    """Create a boolean mask for rows that have any data quality issues.
+
+    Pure function: takes a table, returns a mask. No side effects.
+
+    Uses Arrow compute functions to find rows with invalid characters
+    or replacement characters.
+
+    Args:
+        table: PyArrow Table to check
+
+    Returns:
+        Boolean array where True indicates a bad row
+    """
+    # Start with all False (no issues)
+    bad_mask = pa.repeat(pa.scalar(False, type=pa.bool_()), table.num_rows)
+
+    # For string columns, check for invalid characters and replacement characters
+    for name in table.schema.names:
+        col = table.column(name)
+        if not (pa.types.is_string(col.type) or pa.types.is_large_string(col.type)):
+            continue
+
+        # Non-printable characters (fills nulls as valid)
+        non_printable = pc.utf8_is_printable(col)  # type: ignore
+        # Invert and fill nulls (nulls are considered 'clean')
+        is_bad_char = pc.invert(pc.fill_null(non_printable, True))  # type: ignore
+
+        # Replacement characters
+        has_replacement = pc.match_substring(col, "\ufffd")  # type: ignore
+        has_replacement = pc.fill_null(has_replacement, False)
+
+        bad_mask = pc.or_(bad_mask, is_bad_char)  # type: ignore
+        bad_mask = pc.or_(bad_mask, has_replacement)  # type: ignore
+
+    if isinstance(bad_mask, pa.ChunkedArray):
+        bad_mask = bad_mask.combine_chunks()
+
+    return bad_mask
+
+
+def _validate_arrow_structures(table: pa.Table) -> None:
+    """Validate the integrity of Arrow table structures.
+
+    Pure function: validates or raises. No side effects except logging/errors.
+
+    Args:
+        table: PyArrow table to validate
+
+    Raises:
+        DataQualityError: If Arrow table structure is invalid
+    """
+    try:
+        table.validate(full=True)
+    except pa.ArrowInvalid as e:
+        logger.error(f"Arrow table validation failed: {e}")
+        raise DataQualityError(f"Arrow table validation failed: {e}") from e
+
+
+def _partition_by_validity(
+    table: pa.Table, bad_mask: pa.Array
+) -> tuple[pa.Table, pa.Table]:
+    """Partition a table into clean and bad data.
+
+    Pure function: deterministic transformation.
+
+    Args:
+        table: PyArrow Table to partition
+        bad_mask: Boolean array where True = bad row
+
+    Returns:
+        Tuple of (clean_table, bad_table)
+    """
+    clean_table = table.filter(pc.invert(bad_mask))  # type: ignore
+    bad_table = table.filter(bad_mask)
+    return clean_table, bad_table
+
+
+def _convert_to_original_format(
+    table: pa.Table, is_record_batch: bool, bad_mask: pa.Array
+) -> tuple[pa.Table | pa.RecordBatch, pa.Table | pa.RecordBatch]:
+    """Convert table results back to original format (Table or RecordBatch).
+
+    Pure function: deterministic transformation.
+
+    Args:
+        table: Original PyArrow Table
+        is_record_batch: Whether input was a RecordBatch
+        bad_mask: Boolean array where True = bad row
+
+    Returns:
+        Tuple of (clean_data, bad_data) in original format
+    """
+    clean_table, bad_table = _partition_by_validity(table, bad_mask)
+
+    if not is_record_batch:
+        return clean_table, bad_table
+
+    # Convert to RecordBatch, handling empty results
+    clean_batches = clean_table.to_batches()
+    bad_batches = bad_table.to_batches()
+
+    clean_data = (
+        clean_batches[0]
+        if clean_batches
+        else pa.RecordBatch.from_arrays(
+            [pa.array([], type=field.type) for field in table.schema],
+            schema=table.schema,
+        )
+    )
+
+    bad_data = (
+        bad_batches[0]
+        if bad_batches
+        else pa.RecordBatch.from_arrays(
+            [pa.array([], type=field.type) for field in table.schema],
+            schema=table.schema,
+        )
+    )
+
+    return clean_data, bad_data
+
+
+# ============================================================================
+# VALIDATOR CLASS (Imperative Shell)
+# ============================================================================
+
+
+class UTF8Validator:
+    """UTF-8 data quality validator implementing the Validator protocol.
+
+    This validator checks for:
+    - Non-printable characters in string columns
+    - Unicode replacement characters (U+FFFD)
+
+    Configuration:
+        issue_action: 'reject' (raise error) or 'quarantine' (separate bad data)
+        check_nfc: Whether to perform expensive NFC normalization (not yet implemented)
+
+    Example:
+        >>> validator = UTF8Validator(issue_action="quarantine")
+        >>> result = validator.validate(my_table)
+        >>> print(f"Clean: {result.clean_row_count}, Bad: {result.bad_row_count}")
     """
 
     def __init__(
         self,
         issue_action: Annotated[
             Literal["reject", "quarantine"],
-            "This selects the action to take when issues are found. 'quarantine' to separate \
-            bad records and not block pipeline progress; 'reject' to block the entire batch.",
+            "Action to take: 'reject' blocks pipeline, 'quarantine' separates bad data",
         ] = "reject",
         check_nfc: bool = False,
     ) -> None:
-        """Initialise the validator.
+        """Initialise the UTF-8 validator.
 
         Args:
-            issue_action: The action to take when issues are found.
-            check_nfc: Whether to perform expensive NFC normalization check.
+            issue_action: Action when issues found ('reject' or 'quarantine')
+            check_nfc: Whether to perform NFC normalization check (future)
         """
         self.issue_action = issue_action
+        self.check_nfc = check_nfc
 
-    @staticmethod
-    def _get_bad_row_mask(table: pa.Table) -> pa.Array:
-        """Create a boolean mask for rows that have any data quality issues.
-
-        Uses Arrow compute functions to find rows with invalid characters
-        or replacement characters.
-        """
-        # Start with all False (no issues) using a constant scalar repeated to the table size
-        bad_mask = pa.repeat(pa.scalar(False, type=pa.bool_()), table.num_rows)
-
-        # For string columns, check for invalid characters and replacement characters
-        for name in table.schema.names:
-            col = table.column(name)
-            if not (pa.types.is_string(col.type) or pa.types.is_large_string(col.type)):
-                continue
-
-            # Non-printable characters (fills nulls as valid - non-printable check handles this)
-            non_printable = pc.utf8_is_printable(col)  # type: ignore
-            # Invert and fill nulls (nulls are considered 'clean' for this check)
-            is_bad_char = pc.invert(pc.fill_null(non_printable, True))  # type: ignore
-
-            # Replacement characters
-            has_replacement = pc.match_substring(col, "\ufffd")  # type: ignore
-            has_replacement = pc.fill_null(has_replacement, False)
-
-            bad_mask = pc.or_(bad_mask, is_bad_char)  # type: ignore
-            bad_mask = pc.or_(bad_mask, has_replacement)  # type: ignore
-
-        if isinstance(bad_mask, pa.ChunkedArray):
-            bad_mask = bad_mask.combine_chunks()
-
-        return bad_mask
-
-    @staticmethod
-    def _validate_arrow_structures(table: pa.Table) -> None:
-        """Validate the integrity of Arrow table structures.
-
-        Args:
-            table: PyArrow table to validate
-        """
-        try:
-            table.validate(full=True)
-        except pa.ArrowInvalid as e:
-            logger.error(f"Arrow table validation failed: {e}")
-            raise DataQualityError(f"Arrow table validation failed: {e}") from e
-
-    def validate(
-        self, data: pa.Table | pa.RecordBatch
-    ) -> tuple[pa.Table, pa.Table, list[DataQualityIssue]]:
-        """Validate the given PyArrow data structure for data quality issues.
+    def validate(self, data: pa.Table | pa.RecordBatch) -> ValidationResult:
+        """Validate a PyArrow Table or RecordBatch for UTF-8 issues.
 
         Args:
             data: PyArrow Table or RecordBatch to validate
 
         Returns:
-            Tuple of (clean_table, bad_table, issues)
+            ValidationResult with clean data, bad data, and issues
+
+        Raises:
+            DataQualityError: If issue_action is 'reject' and issues found
         """
         is_record_batch = isinstance(data, pa.RecordBatch)
         table = pa.Table.from_batches([data]) if is_record_batch else data
 
-        self._validate_arrow_structures(table)
+        # Validate Arrow structures
+        _validate_arrow_structures(table)
+
+        # Check for UTF-8 issues (pure function call)
         issues = validate_string_columns(table)
 
+        # Handle case with no issues
         if not issues:
-            # No issues - all data is clean, no bad data
             empty_data = table.schema.empty_table()
             if is_record_batch:
-                # Create empty RecordBatch with the same schema
                 empty_batch = pa.RecordBatch.from_arrays(
                     [pa.array([], type=field.type) for field in table.schema],
                     schema=table.schema,
                 )
-                return (data, empty_batch, [])
-
-            return table, empty_data, []
-
-        # Efficiently split table using Arrow compute
-        bad_mask = self._get_bad_row_mask(table)
-        clean_table = table.filter(pc.invert(bad_mask))  # ty: ignore[unresolved-attribute]
-        bad_table = table.filter(bad_mask)
-
-        if is_record_batch:
-            # Convert tables to batches, handling empty results
-            clean_batches = clean_table.to_batches()
-            bad_batches = bad_table.to_batches()
-
-            # Create empty batch with proper schema if no rows
-            if not clean_batches:
-                clean_data = pa.RecordBatch.from_arrays(
-                    [pa.array([], type=field.type) for field in table.schema],
-                    schema=table.schema,
+                return ValidationResult(
+                    clean_data=data,
+                    bad_data=empty_batch,
+                    issues=[],
                 )
-            else:
-                clean_data = clean_batches[0]
+            return ValidationResult(
+                clean_data=table,
+                bad_data=empty_data,
+                issues=[],
+            )
 
-            if not bad_batches:
-                bad_data = pa.RecordBatch.from_arrays(
-                    [pa.array([], type=field.type) for field in table.schema],
-                    schema=table.schema,
-                )
-            else:
-                bad_data = bad_batches[0]
-            return clean_data, bad_data, issues
+        # Partition into clean and bad data (pure function calls)
+        bad_mask = _get_bad_row_mask(table)
+        clean_data, bad_data = _convert_to_original_format(
+            table, is_record_batch, bad_mask
+        )
 
-        return clean_table, bad_table, issues
+        result = ValidationResult(
+            clean_data=clean_data,
+            bad_data=bad_data,
+            issues=issues,
+        )
+
+        # Raise error if configured to reject on issues
+        if self.issue_action == "reject" and not result.is_valid:
+            raise DataQualityError(
+                f"Validation failed with {len(issues)} issues. "
+                f"Bad rows: {result.bad_row_count}/{result.total_row_count}"
+            )
+
+        return result
 
     @staticmethod
     def report_summary(summary: ValidationSummary) -> None:
@@ -246,3 +345,7 @@ class ArrowValidator:
                 f"Pipeline rejected due to {summary.total_bad_rows} "
                 f"bad rows detected during validation."
             )
+
+
+# Backward compatibility alias
+ArrowValidator = UTF8Validator

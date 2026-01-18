@@ -7,6 +7,7 @@ dlthub_telemetry = false
 [destination.filesystem]
 bucket_url = "/Users/rory/github/dlt_ingestion_poc/data/output"
 kwargs = '{"auto_mkdir": true}'
+layout = "{schema_name}/{table_name}/{YYYY}_{MM}_{DD}/{load_id}.{file_id}.{ext}"
 
 [destination.filesystem.parquet]
 compression = "snappy"

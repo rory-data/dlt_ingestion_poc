@@ -59,6 +59,55 @@ def stream_csv_to_arrow(
             yield from reader
 
 
+def copy_csv_to_parquet(
+    file_path: str | Path,
+    output_path: str | Path,
+    header: bool = False,
+    sep: str = "|",
+) -> Path:
+    """Export CSV to Parquet using DuckDB for a one-time extraction.
+
+    Args:
+        file_path: Input CSV path.
+        output_path: Target Parquet path.
+        header: Whether the CSV has a header.
+        sep: Separator.
+
+    Returns:
+        Path to the created Parquet file.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with duckdb.connect(":memory:") as con:
+        # read_csv_auto handles quoting and multi-line values well
+        con.execute(
+            f"COPY (SELECT * FROM read_csv_auto('{file_path}', header={header}, sep='{sep}', all_varchar=True)) "
+            f"TO '{output_path}' (FORMAT 'PARQUET')"
+        )
+    return output_path
+
+
+def stream_parquet_to_arrow(
+    file_path: str | Path,
+    batch_size: int = 50_000,
+) -> Iterator[pa.Table]:
+    """Stream Parquet data as Arrow Tables.
+
+    Args:
+        file_path: Path to the Parquet file.
+        batch_size: Number of rows per batch.
+
+    Yields:
+        PyArrow Table objects.
+    """
+    import pyarrow.parquet as pq
+
+    parquet_file = pq.ParquetFile(file_path)
+    for batch in parquet_file.iter_batches(batch_size=batch_size):
+        yield pa.Table.from_batches([batch])
+
+
 def rename_csv_columns(
     batch: pa.RecordBatch | pa.Table,
     column_names: list[str],

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ingestion.engines.pipeline.operations import (
+from ingestion.engines.dlt.operations import (
     load_odcs_schemas,
     setup_validator,
     validate_source_file,
@@ -31,7 +31,7 @@ def test_setup_validator():
     assert v.issue_action == "reject"
 
 
-@patch("ingestion.engines.pipeline.operations.get_dlt_schemas")
+@patch("ingestion.engines.dlt.operations.get_dlt_schemas")
 def test_load_odcs_schemas_success(mock_get_schemas):
     """Test successful schema loading."""
     mock_get_schemas.return_value = {"table": {}}
@@ -39,7 +39,7 @@ def test_load_odcs_schemas_success(mock_get_schemas):
     assert schemas == {"table": {}}
 
 
-@patch("ingestion.engines.pipeline.operations.get_dlt_schemas")
+@patch("ingestion.engines.dlt.operations.get_dlt_schemas")
 def test_load_odcs_schemas_failure(mock_get_schemas):
     """Test schema loading failure should exit."""
     mock_get_schemas.side_effect = Exception("error")
