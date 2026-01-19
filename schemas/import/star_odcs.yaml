@@ -1,0 +1,219 @@
+version: 1.0.0
+kind: DataContract
+apiVersion: v3.1.0
+id: my-data-contract
+name: My Data Contract
+status: draft
+schema:
+  - name: DimDate
+    physicalType: table
+    customProperties:
+      - property: namespace
+        value: public
+    logicalType: object
+    physicalName: DimDate
+    properties:
+      - name: DateKey
+        physicalType: int
+        description: "Example: 20240424"
+        primaryKey: true
+        primaryKeyPosition: 1
+        logicalType: integer
+      - name: FullDate
+        physicalType: date
+        logicalType: date
+        required: true
+      - name: DayOfMonth
+        physicalType: int
+        logicalType: integer
+        required: true
+      - name: DayOfWeek
+        physicalType: varchar(10)
+        logicalType: string
+        required: true
+      - name: MonthOfYear
+        physicalType: int
+        logicalType: integer
+        required: true
+      - name: MonthName
+        physicalType: varchar(10)
+        logicalType: string
+        required: true
+      - name: QuarterOfYear
+        physicalType: int
+        logicalType: integer
+        required: true
+      - name: Year
+        physicalType: int
+        logicalType: integer
+        required: true
+      - name: IsWeekend
+        physicalType: boolean
+        logicalType: boolean
+        required: true
+  - name: DimCustomer
+    physicalType: table
+    customProperties:
+      - property: namespace
+        value: public
+    logicalType: object
+    physicalName: DimCustomer
+    properties:
+      - name: CustomerKey
+        physicalType: integer
+        description: Auto-incrementing key via sequence
+        primaryKey: true
+        primaryKeyPosition: 1
+        logicalType: integer
+      - name: CustomerID
+        physicalType: varchar(50)
+        description: Business key from source system
+        logicalType: string
+        unique: true
+      - name: CustomerName
+        physicalType: varchar(255)
+        logicalType: string
+        required: true
+      - name: Email
+        physicalType: varchar(255)
+        logicalType: string
+      - name: City
+        physicalType: varchar(100)
+        logicalType: string
+      - name: State
+        physicalType: varchar(100)
+        logicalType: string
+      - name: Country
+        physicalType: varchar(100)
+        logicalType: string
+      - name: Segment
+        physicalType: varchar(50)
+        description: e.g., 'Retail', 'Wholesale'
+        logicalType: string
+  - name: DimProduct
+    physicalType: table
+    customProperties:
+      - property: namespace
+        value: public
+    logicalType: object
+    physicalName: DimProduct
+    properties:
+      - name: ProductKey
+        physicalType: integer
+        description: Auto-incrementing key via sequence
+        primaryKey: true
+        primaryKeyPosition: 1
+        logicalType: integer
+      - name: ProductID
+        physicalType: varchar(50)
+        description: Business key from source system
+        logicalType: string
+        unique: true
+      - name: ProductName
+        physicalType: varchar(255)
+        logicalType: string
+        required: true
+      - name: Category
+        physicalType: varchar(100)
+        logicalType: string
+      - name: Subcategory
+        physicalType: varchar(100)
+        logicalType: string
+      - name: Brand
+        physicalType: varchar(100)
+        logicalType: string
+      - name: Color
+        physicalType: varchar(50)
+        logicalType: string
+      - name: StandardCost
+        physicalType: decimal(10,2)
+        description: Cost price might live here
+        logicalType: number
+  - name: DimStore
+    physicalType: table
+    customProperties:
+      - property: namespace
+        value: public
+    logicalType: object
+    physicalName: DimStore
+    properties:
+      - name: StoreKey
+        physicalType: integer
+        description: Auto-incrementing key via sequence
+        primaryKey: true
+        primaryKeyPosition: 1
+        logicalType: integer
+      - name: StoreID
+        physicalType: varchar(50)
+        description: Business key from source system
+        logicalType: string
+        unique: true
+      - name: StoreName
+        physicalType: varchar(255)
+        logicalType: string
+        required: true
+      - name: City
+        physicalType: varchar(100)
+        logicalType: string
+      - name: State
+        physicalType: varchar(100)
+        logicalType: string
+      - name: Country
+        physicalType: varchar(100)
+        logicalType: string
+  - name: FactSales
+    physicalType: table
+    customProperties:
+      - property: namespace
+        value: public
+    logicalType: object
+    physicalName: FactSales
+    properties:
+      - name: SalesKey
+        physicalType: integer
+        description: Unique key for the fact row itself, auto-generated via sequence
+        primaryKey: true
+        primaryKeyPosition: 1
+        logicalType: integer
+      - name: DateKey
+        physicalType: int
+        customProperties:
+          - property: references
+            value: DimDate.DateKey
+        logicalType: integer
+        required: true
+      - name: CustomerKey
+        physicalType: int
+        customProperties:
+          - property: references
+            value: DimCustomer.CustomerKey
+        logicalType: integer
+        required: true
+      - name: ProductKey
+        physicalType: int
+        customProperties:
+          - property: references
+            value: DimProduct.ProductKey
+        logicalType: integer
+        required: true
+      - name: StoreKey
+        physicalType: int
+        description: Use a placeholder key if not applicable, e.g., -1 for Online
+        customProperties:
+          - property: references
+            value: DimStore.StoreKey
+        logicalType: integer
+        required: true
+      - name: QuantitySold
+        physicalType: int
+        logicalType: integer
+        required: true
+      - name: UnitPrice
+        physicalType: decimal(10,2)
+        logicalType: number
+        required: true
+      - name: TotalAmount
+        physicalType: decimal(12,2)
+        description: Often calculated as Quantity * UnitPrice
+        logicalType: number
+        required: true

@@ -1,0 +1,524 @@
+version: 1.0.0
+kind: DataContract
+apiVersion: v3.1.0
+id: customer_address
+name: Customer Address Example
+status: draft
+schema:
+  - name: customer_address
+    physicalType: table
+    logicalType: object
+    physicalName: customer_address
+    properties:
+      - name: ADDRESS_ID
+        logicalType: integer
+        physicalType: BIGINT
+        description: ""
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 1
+        examples:
+          - 6150
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: CUSTOMER_ID
+        logicalType: string
+        physicalType: VARCHAR(15)
+        description: ""
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 2
+        examples:
+          - "90000000"
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: POSTAL_ADDR_TYPE
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 3
+        examples:
+          - Home
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: POSTAL_ADDR_SEQ
+        logicalType: integer
+        physicalType: INT
+        description: ""
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 4
+        examples:
+          - 1
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: CONTACT_SUBTYPE
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+      - name: CONTACT_SEQ
+        logicalType: integer
+        physicalType: INT
+        description: ""
+        examples:
+          - 1
+      - name: START_DATE
+        logicalType: date
+        logicalTypeOptions:
+          format: YYYY-MM-DD
+        physicalType: DATE
+        description: ""
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 5
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: END_DATE
+        logicalType: date
+        logicalTypeOptions:
+          format: YYYY-MM-DD
+        physicalType: DATE
+        description: ""
+      - name: POSTAL_ADDRESS_CAT
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 6
+        examples:
+          - Master
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: PERPETUAL_START_DATE
+        logicalType: date
+        logicalTypeOptions:
+          format: MM-DD
+        physicalType: DATE
+        description: ""
+      - name: PERPETUAL_END_DATE
+        logicalType: date
+        logicalTypeOptions:
+          format: MM-DD
+        physicalType: DATE
+        description: ""
+      - name: POSTAL_ADDR_FORMAT_TYPE
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+        required: true
+        primaryKey: true
+        primaryKeyPosition: 7
+        examples:
+          - New Zealand
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: RECIPIENT_LINE_1_TYPE
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+        examples:
+          - Primary
+      - name: RECIPIENT_LINE_2_TYPE
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+      - name: RECIPIENT_LINE_3_TYPE
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+      - name: RECIPIENT_LINE_1
+        logicalType: string
+        physicalType: VARCHAR(300)
+        description: ""
+      - name: RECIPIENT_LINE_2
+        logicalType: string
+        physicalType: VARCHAR(300)
+        description: ""
+      - name: RECIPIENT_LINE_3
+        logicalType: string
+        physicalType: VARCHAR(300)
+        description: ""
+      - name: INFORMATION_LINE_1
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: INFORMATION_LINE_2
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: DESTINATION_LINE_1
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+        examples:
+          - 777 Cranbrook Avenue
+      - name: DESTINATION_LINE_2
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: DESTINATION_LINE_3
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: LOCATION_LINE_1
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: LOCATION_LINE_2
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: LOCATION_LINE_3
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: LOCATION_LINE_4
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: CITY
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+        examples:
+          - Auckland
+      - name: STATE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: POSTAL_CODE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+        examples:
+          - "0610"
+      - name: POSTAL_CODE_EXTN
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: DELIVERY_POINT_BARCODE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: COUNTRY
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+        examples:
+          - NZL
+      - name: PROVINCE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: REGION
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: MUNICIPALITY
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: DISTRICT
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: VILLAGE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: PARISH
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: NEIGHBOURHOOD
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: COUNTY
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: VALIDATION_SRC
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+      - name: VALIDATION_DATE
+        logicalType: date
+        logicalTypeOptions:
+          format: YYYY-MM-DD
+        physicalType: DATE
+        description: ""
+      - name: OCCUPANCY_DATE
+        logicalType: date
+        logicalTypeOptions:
+          format: YYYY-MM-DD
+        physicalType: DATE
+        description: ""
+      - name: PURCHASE_DATE
+        logicalType: date
+        logicalTypeOptions:
+          format: YYYY-MM-DD
+        physicalType: DATE
+        description: ""
+      - name: ELEMENTISATION_OVERRIDE
+        logicalType: boolean
+        physicalType: BOOLEAN
+        description: ""
+      - name: STANDARDISATION_OVERRIDE
+        logicalType: boolean
+        physicalType: BOOLEAN
+        description: ""
+      - name: VALIDATION_OVERRIDE
+        logicalType: boolean
+        physicalType: BOOLEAN
+        description: ""
+      - name: FORMAT_OVERRIDE
+        logicalType: boolean
+        physicalType: BOOLEAN
+        description: ""
+      - name: OCCUPANCY_END_DATE
+        logicalType: date
+        logicalTypeOptions:
+          format: YYYY-MM-DD
+        physicalType: DATE
+        description: ""
+      - name: MAIL_CODE
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+      - name: SPECIAL_INSTRUCTIONS
+        logicalType: string
+        physicalType: VARCHAR(1024)
+        description: ""
+      - name: LEGAL_ADDR_START_DATE
+        logicalType: date
+        logicalTypeOptions:
+          format: YYYY-MM-DD
+        physicalType: DATE
+        description: ""
+      - name: PO_BOX_IND
+        logicalType: boolean
+        physicalType: BOOLEAN
+        description: ""
+      - name: MILITARY_ADDR_IND
+        logicalType: boolean
+        physicalType: BOOLEAN
+        description: ""
+      - name: TIMEZONE
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+      - name: HOST_TIMESTAMP
+        logicalType: timestamp
+        logicalTypeOptions:
+          format: YYYY-MM-DD HH:mm:ss
+        physicalType: TIMESTAMP(6)
+        description: ""
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: OPERATIONAL_TIMESTAMP
+        logicalType: timestamp
+        logicalTypeOptions:
+          format: YYYY-MM-DD HH:mm:ss
+        physicalType: TIMESTAMP(6)
+        description: ""
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: ACCEPTED_TIMESTAMP
+        logicalType: timestamp
+        logicalTypeOptions:
+          format: YYYY-MM-DD HH:mm:ss
+        physicalType: TIMESTAMP(6)
+        description: ""
+        required: true
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: ACCEPTED_TIMESTAMP_UTC_OFFSET
+        logicalType: string
+        physicalType: VARCHAR(6)
+        description: ""
+        required: true
+        examples:
+          - +13:00
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: WORKSTATION_ID
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+        required: true
+        examples:
+          - BackOffice
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: USER_ID
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+        required: true
+        examples:
+          - E0001050
+        quality:
+          - type: library
+            metric: nullValues
+            mustBe: 0
+            unit: rows
+      - name: FIRM
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: HOUSE_NUMBER
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: PRE_DIRECTION
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: STREET_NAME
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: STREET_TYPE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: POST_DIRECTION
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: BUILDING_NUMBER
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: BUILDING_NAME
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: BOX_NUMBER
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: BOX_TYPE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: RURAL_ROUTE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: RURAL_ROUTE_TYPE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: PMB_NUMBER
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: PMB_DESIGNATOR
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: SUBADDRESS
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: SUBADDRESS_TYPE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: LOCALITY
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: VANITY_PRE_DIRECTION
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: VANITY_STREET_NAME
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: VANITY_STREET_TYPE
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: VANITY_POST_DIRECTION
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: VANITY_CITY
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: VALIDATION_STS
+        logicalType: string
+        physicalType: VARCHAR(32)
+        description: ""
+        examples:
+          - Not Validated
+      - name: VALIDATION_DETAIL
+        logicalType: string
+        physicalType: VARCHAR(64)
+        description: ""
+      - name: ACTION
+        logicalType: string
+        physicalType: VARCHAR(6)
+        description: ""
+        examples:
+          - Delete
+    quality:
+      - type: library
+        metric: duplicateValues
+        mustNotBe: 0
+        unit: rows
+        arguments:
+          properties:
+            - ADDRESS_ID
+            - CUSTOMER_ID
+            - POSTAL_ADDR_TYPE
+            - POSTAL_ADDR_SEQ
+            - START_DATE
+            - POSTAL_ADDRESS_CAT
+            - POSTAL_ADDR_FORMAT_TYPE
