@@ -3,6 +3,7 @@ files/
 data/
 sandbox/
 docs/
+.dlt/
 
 .ruff_cache/
 docs/source

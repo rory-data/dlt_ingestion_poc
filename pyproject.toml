@@ -1,11 +1,11 @@
 [project]
-name = "dlt-ingestion-poc"
+name = "jestr"
 version = "0.0.1"
-description = "This is a project for experimentation using dlt for data ingestion in a data pipeline."
+description = "This is a project using dlt and Arrow for data ingestion and validation in a data pipeline."
 authors = [{ name = "Rory Purcell-Hewitt" }]
 readme = "README.md"
 keywords = ['python']
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 classifiers = [
     "Intended Audience :: Data Engineers",
     "Programming Language :: Python",
@@ -15,34 +15,47 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
+    "click>=8.3.1",
     "dlt[duckdb,filesystem,sql_database,workspace]>=1.9.0",
     "duckdb>=1.2.1",
-    "duckdb-engine>=0.17.0",
-    "ibis-framework[duckdb,polars]>=10.3",
+    "open-data-contract-standard>=3.1.0",
+    "orjson>=3.9.0",
     "pyarrow>=22.0.0",
-    "loguru>=0.7.3",
-    "datacontract-cli>=0.11.3",
+    "structlog>=25.5.0",
 ]
 
 [dependency-groups]
 dev = [
+    "jestr[all]",
+    "faker>=37.1.0",
     "hypothesis>=6.92.0",
     "memray>=1.19.1",
-    "pytest>=7.2.0",
-    "pytest-cookies>=0.6.1",
-    "pytest-cov>=4.0.0",
-    "faker>=37.1.0",
-    "ruff>=0.9.2",
-    "ty>=0.0.7",
-    "types-pyyaml>=6.0.12.20241230",
     "prek>=0.2.25",
+    "pytest>=7.2.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.9.2",
+    "ty>=0.0.14",
+    "types-pyyaml>=6.0.12.20241230",
 ]
+
+[project.optional-dependencies]
+all = ["jestr[oracle, teradata]"]
+
+oracle = ["oracledb>=3.4.0"]
+
+teradata = ["teradatasql>=20.0.0.40"]
+
+mysql = ["adbc-driver-manager>=1.10.0", "pymysql>=1.1.2"]
 
 [tool.uv]
 package = false
 
+[build-system]
+requires = ["uv_build>=0.9.28,<0.10.0"]
+build-backend = "uv_build"
+
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 line-length = 88
 fix = true
 
@@ -68,13 +81,10 @@ select = [
 ]
 ignore = [
     "D203", # one-blank-line-before-class (conflicts with D211)
-    "D212", # multi-line-summary-first-line (conflicts with D213)
+    "D213", # multi-line-summary-first-line (conflicts with D213)
     "E501", # line-too-long
     "F403", # undefined-local-with-import-star
-]
-# Let unfixable automatically be ignored during ruff format
-unfixable = [
-    "F401", # unused-import
+    "TRY003"
 ]
 
 [tool.ruff.format]
@@ -82,13 +92,15 @@ quote-style = "double"  # like Black, use double quotes for strings.
 indent-style = "space"  # like Black, indent with spaces.
 skip-magic-trailing-comma = false  # like Black, respect magic trailing commas.
 line-ending = "auto"  # like Black, automatically detect the appropriate line ending.
-docstring-code-format = false
+docstring-code-format = true
 docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
  
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"] # unused import in __init__ files
 "tests/*" = ["S101", "ANN", "S603"] # assert usage and type annotations in tests
-"test_foo.py" = ["S101", "ANN"] # assert usage and type annotations in test_foo.py
 "conftest.py" = [
     "S101",
     "ANN",
@@ -96,15 +108,23 @@ docstring-code-line-length = "dynamic"
  
 [tool.ruff.lint.isort]
 known-third-party = ["pytest", "requests"]
- 
-[tool.ruff.lint.pydocstyle]
-convention = "google" # Use Google-style docstrings
 
 [tool.ty.src]
-include = [".", "ingestion", "tests"]
+include = [".", "jestr", "tests"]
  
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 python_classes = "Test*"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "def __repr__",
+    "def __str__",
+]
