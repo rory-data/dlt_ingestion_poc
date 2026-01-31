@@ -1,7 +1,8 @@
 files/
 .draft/
 data/
-experiments/
+sandbox/
+docs/
 
 .ruff_cache/
 docs/source
