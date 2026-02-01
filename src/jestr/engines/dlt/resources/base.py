@@ -1,4 +1,4 @@
-"""Base utiltiies for dlt resources."""
+"""Base utilities for dlt resources."""
 
 import dlt
 import structlog
@@ -42,7 +42,7 @@ def create_adapter_resource(
         primary_keys=primary_keys if primary_keys else None,
         schema_contract=schema_contract,
         # Store ODCS properties as `x-odcs-*` metadata hints in the dlt schema
-        additional_reosurce_hints={
+        additional_resource_hints={
             "x-odcs-contract-id": contract.contract_id,
             "x-odcs-contract-version": contract.version,
             "x-odcs-contract-status": contract.status,

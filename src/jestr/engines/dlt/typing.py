@@ -49,6 +49,6 @@ def cast_columns_to_dlt_types(
 
         return casted_arrays, True
 
-    except Exception:
-        logger.error("Column casting failed: {e}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Column casting failed: {e}", exc_info=True)
         return [], False

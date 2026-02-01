@@ -167,6 +167,25 @@ class ValidationSummary:
         self.expected_record_counts = expected_counts
 
 
+def get_validation_summary(pipeline_state: dict[str, Any]) -> ValidationSummary | None:
+    """Retrieve validation summary from pipeline state.
+
+    Args:
+        pipeline_state: The dlt pipeline specific state dictionary.
+
+    Returns:
+        ValidationSummary object if found, else None.
+    """
+    if not pipeline_state:
+        return None
+
+    summary_dict = pipeline_state.get("validation_summary")
+    if not summary_dict:
+        return None
+
+    return ValidationSummary.from_dict(summary_dict)
+
+
 def extract_issue_summary(
     column: pa.ChunkedArray, mask: pa.Array | pa.ChunkedArray, max_samples: int = 5
 ) -> tuple[int, list[str]]:

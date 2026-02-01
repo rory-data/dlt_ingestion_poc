@@ -26,7 +26,7 @@ def create_custom_sql_resource(
     if not table_name:
         raise ValueError("Table name must be provided.")
 
-        logger.info("Creating custom SQL resource via adapter for %s.", table_name)
+    logger.info("Creating custom SQL resource via adapter for %s.", table_name)
 
     try:
         resource = create_adapter_resource(

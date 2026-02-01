@@ -35,7 +35,7 @@ class OracleSource:
         query: str | None = None,
         batch_date: str = "",
         batch_size: int = 50_000,
-    ) -> "OracleSource":
+    ) -> None:
         """Factory method to create an OracleSource instance."""
         self.resource_name = resource_name
         self.contract = contract
@@ -63,7 +63,7 @@ class OracleSource:
             state = dlt.current.state()
             state.setdefault("validation_metrics", [])
 
-            def get_resource(self) -> DltResource:
+            def get_resource() -> DltResource:
                 return create_custom_sql_resource(
                     database_type="oracle",
                     connection_uri=self.connection_uri,
@@ -74,7 +74,7 @@ class OracleSource:
                     database_schema_name=self.database_schema_name,
                 )
 
-            def get_transformers(self) -> tuple[Callable, Callable, Callable]:
+            def get_transformers() -> tuple[Callable, Callable, Callable]:
                 from jestr.validators import IngestionValidator
 
                 validator = IngestionValidator(
@@ -88,6 +88,6 @@ class OracleSource:
                     batch_date=self.batch_date,
                 )
 
-            return get_resource(self), *get_transformers(self)
+            return get_resource, *get_transformers
 
         return ingest_oracle_source

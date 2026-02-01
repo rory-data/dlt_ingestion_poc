@@ -1,1 +1,1 @@
-"""Unit tests for the dlt-ingestion-poc package."""
+"""Test suite for jestr."""

@@ -6,7 +6,7 @@ from dlt.common.schema.typing import TTableSchema
 
 from jestr.contracts import ODCSContract
 
-from .check import structural
+from .checks import structural
 from .core import DataQualityIssue, ValidationResult, Validator, _partition_by_validity
 from .core.base import _get_bad_row_mask
 
