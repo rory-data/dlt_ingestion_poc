@@ -1,11 +1,11 @@
 # Development Guidelines for AI Agents
 
-> **Note**: This file provides quick-reference development guidelines. For comprehensive AI instructions, see `instructions/copilot-instructions.md`.
+> **Note**: This file provides quick-reference development guidelines. For comprehensive AI instructions, see `~/.copilot/instructions/copilot-instructions.md`.
 > **Important**: This development environment is macOS (Silicon) using zsh. Commands need to cater for that.
 
 ## Core Engineering Approach
 
-Follow **Core Engineering Principles** from `instructions/core/engineering-principles.instructions.md`:
+Follow **Core Engineering Principles** from `~/.copilot/instructions/core/engineering-principles.instructions.md`:
 
 - Apply SOLID principles, DRY, YAGNI, KISS pragmatically
 - Write clean, readable code that tells a story and minimises cognitive load
@@ -14,7 +14,7 @@ Follow **Core Engineering Principles** from `instructions/core/engineering-princ
 
 ## Workflow Standards
 
-Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructions.md`:
+Follow the **6-Phase Loop** from `~/.copilot/instructions/core/workflow-standards.instructions.md`:
 
 1. **Analyse**: Understand requirements, document in EARS notation
 2. **Design**: Create technical design, error handling, test strategy
@@ -23,21 +23,18 @@ Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructi
 5. **Reflect**: Refactor for maintainability, update documentation
 6. **Handoff**: Generate summary, prepare PR with changelog
 
-## Language-Specific Guidelines
+## Language-Specific Skills
 
-### Python Development
+For language-specific guidance, refer to the relevant skills:
 
-- Use modern Python syntax with type hints
-- Ensure code is compatible with the Python versions specified in the project configuration
-- Follow PEP 8 conventions
-- Use pytest for testing with descriptive test names: `test_[function]_[scenario]_[expected_outcome]`
-- Organise tests to mirror module structure
-- Target >80% test coverage with meaningful tests
-- Use `memray` for memory profiling in complex scenarios. It is installed as a `uv tool`
-- `loguru` is the preferred logging library, preferably using structured logging. `loguru` prefers brace-style formatting.
-- See `instructions/language/python.instructions.md` for details
+- **Python**: See `~/.copilot/skills/python-conventions/SKILL.md` and `~/.copilot/skills/python-testing-patterns/SKILL.md`
+- **Go**: See `~/.copilot/skills/golang-conventions/SKILL.md`
+- **Docker**: See `~/.copilot/skills/docker-best-practices/SKILL.md`
+- **Markdown**: See `~/.copilot/skills/markdown-conventions/SKILL.md`
 
-## dlt Development
+## Project-Specific Guidance
+
+### dlt Development
 
 - dlt means "data load tool". It is an open source Python library installable via `uv add dlt`.
 - To create a new pipeline, use `dlt init <source> <destination>`.
@@ -48,42 +45,6 @@ Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructi
 - Use dlt's REST API source if loading data from the web.
 - Use dlt's SQL source when loading data from an SQL database or backend.
 - Use dlt's filesystem source if loading data from files (CSV, PDF, Parquet, JSON, and more). This works for local filesystems and cloud buckets (AWS, Azure, GCP, Minio, etc.).
-
-### Go Development
-
-- Use Go 1.21+ with modern features (generics, slices package)
-- Write idiomatic Go: simple, explicit, composition over inheritance
-- Follow table-driven test patterns with subtests
-- Use `gofmt`, `goimports`, and `golangci-lint` for code quality
-- Accept interfaces, return structs
-- See `instructions/language/golang.instructions.md` for details
-
-### Docker Development
-
-- Use multi-stage builds for optimal image size
-- Run containers as non-root users
-- Pin base image versions for reproducibility
-- Minimise layers and use .dockerignore
-- See `instructions/language/docker.instructions.md` for details
-
-### Documentation
-
-- Use NZ English spelling and grammar
-- Follow Markdown standards from `instructions/language/markdown.instructions.md`
-- Use sentence case for headings (except main title)
-- Keep documentation concise and actionable
-- Do not create a summary document of any agent changes unless specifically instructed
-
-## Testing Instructions
-
-- Run all tests before committing changes
-- Add or update tests for any code changes
-- Use pytest with proper fixture management and mocking
-- Mock external dependencies at appropriate levels
-- Ensure the use of mocks e.g. `MagicMock()` includes specs as per best practice
-- Test happy paths, edge cases, and error conditions
-- Validate test coverage and ensure meaningful assertions
-- Refer to [the relevant loguru guide](https://loguru.readthedocs.io/en/stable/resources/migration.html#replacing-caplog-fixture-from-pytest-library) for replacing pytest's `caplog`
 
 ## Code Quality Standards
 
@@ -98,7 +59,7 @@ Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructi
 ### Project Setup
 
 - Check README.md and CONTRIBUTING.md for project-specific setup instructions
-- Use uv-managed virtual environments for Python projects
+- Use `uv`-managed virtual environments for Python projects
 - Use Astral's `ruff` for linting and formatting
 - Use Astral's `ty` for typing
 - Install dependencies before making changes
@@ -129,15 +90,15 @@ Follow the **6-Phase Loop** from `instructions/core/workflow-standards.instructi
 
 ## Quick Reference
 
-> **For comprehensive quick reference tables**, see `instructions/quick-reference/instruction-index.md`
+> **For comprehensive quick reference tables**, see `~/.copilot/instructions/quick-reference/instruction-index.md`
 
-| Task                | Primary Instructions                          | Action                      |
-| ------------------- | --------------------------------------------- | --------------------------- |
-| Feature development | engineering-principles.md + language-specific | Follow 6-phase loop         |
-| Code review         | engineering-principles.md                     | Apply SOLID, clean code     |
-| Documentation       | markdown.instructions.md                      | Use templates, NZ English   |
-| Testing             | engineering-principles.md + language-specific | Test pyramid, AAA pattern   |
-| Containerisation    | docker.instructions.md                        | Multi-stage, security focus |
+| Task                | Primary Instructions                    | Action                      |
+| ------------------- | --------------------------------------- | --------------------------- |
+| Feature development | engineering-principles + language skill | Follow 6-phase loop         |
+| Code review         | engineering-principles                  | Apply SOLID, clean code     |
+| Documentation       | markdown-conventions skill              | Use templates, NZ English   |
+| Testing             | python-testing-patterns skill           | Test pyramid, AAA pattern   |
+| Containerisation    | docker-best-practices skill             | Multi-stage, security focus |
 
 ## Emergency Quick Checks
 

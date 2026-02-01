@@ -4,6 +4,7 @@ data/
 sandbox/
 docs/
 .dlt/
+_old/
 
 .ruff_cache/
 docs/source

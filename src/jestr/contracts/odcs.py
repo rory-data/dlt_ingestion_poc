@@ -98,7 +98,7 @@ class ODCSContract:
                 mode,
             )
             return "reject"
-        return cast(EvolutionMode, mode)
+        return cast(ValidationMode, mode)
 
     def to_dlt_schemas(self) -> dict[str, TTableSchema]:
         """Convert the ODCS contract to dlt table schemas dictionary."""

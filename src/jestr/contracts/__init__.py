@@ -1,5 +1,5 @@
 """Library for integrating Open Data Contract Standard contracts."""
 
-from .contract import ODCSContract
+from .odcs import ODCSContract
 
 __all__ = ["ODCSContract"]
