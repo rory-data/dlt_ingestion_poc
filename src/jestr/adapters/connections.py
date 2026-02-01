@@ -116,7 +116,7 @@ class ConnectionPoolManager(ABC, Generic[ConnectionT]):
 
             except Exception as exc:
                 logger.warning(
-                    "Error closing active connection on $s: %s", self._pool_name, exc
+                    "Error closing active connection on %s: %s", self._pool_name, exc
                 )
 
             finally:

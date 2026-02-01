@@ -1,4 +1,4 @@
-"""Simple factory for creating database adpter instances."""
+"""Simple factory for creating database adapter instances."""
 
 from typing import TYPE_CHECKING, Any, Literal, overload
 
@@ -54,7 +54,6 @@ def create_adapter(
                 connection_uri=connection_uri,
                 connection_factory=connection_factory,
                 config=cfg,
-                max_threads=max_threads,
                 **kwargs,
             )
         case "teradata":
@@ -71,7 +70,6 @@ def create_adapter(
                 connection_uri=connection_uri,
                 connection_factory=connection_factory,
                 config=cfg,
-                max_threads=max_threads,
                 **kwargs,
             )
         case _:

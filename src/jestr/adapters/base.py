@@ -29,8 +29,8 @@ class BaseAdapter(ConnectionPoolManager):
         )
 
     @abstractmethod
-    def to_arrow(self, query: str) -> pa.RecordBatch:
-        """Execute a query and return the results as a PyArrow RecordBatch."""
+    def to_arrow(self, query: str) -> Iterator[pa.RecordBatch]:
+        """Execute a query and return the results as PyArrow RecordBatch iterator."""
         ...
 
     @abstractmethod

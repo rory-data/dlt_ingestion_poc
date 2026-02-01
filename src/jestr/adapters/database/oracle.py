@@ -106,7 +106,9 @@ class OracleAdapter(BaseAdapter):
 
                 dsn = oracledb.makedsn(host, port, service_name=service_name)
                 connection = oracledb.connect(user=username, password=password, dsn=dsn)
-                logger.debug("Acquired connection via URI", host, service_name)
+                logger.debug(
+                    "Acquired connection via URI", host=host, service_name=service_name
+                )
 
         except Exception as exc:
             raise ImportError(
@@ -128,7 +130,7 @@ class OracleAdapter(BaseAdapter):
         """Get default compression algorithm for Parquet files."""
         return self.config.compression
 
-    def _get_defaultwrite_statistics(self) -> bool:
+    def _get_default_write_statistics(self) -> bool:
         """Get default setting for writing column statistics."""
         return self.config.write_statistics
 

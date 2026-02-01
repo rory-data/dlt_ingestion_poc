@@ -1,12 +1,8 @@
 """Teradata database adapter implementation."""
 
-from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
-import pyarrow as pa
 import structlog
-import teradatasql
 from pydantic import BaseModel, Field
 
 from ..base import BaseAdapter
