@@ -1,12 +1,13 @@
 """Integration tests for data validation modules."""
 
 import pyarrow as pa
+import pyarrow.compute as pc
 import pytest
 
+from jestr.validators.checks import structural
 from jestr.validators.core import (
     DataQualityIssue,
     ValidationResult,
-    _get_bad_row_mask,
     _partition_by_validity,
 )
 from jestr.validators.core.issues import Severity
@@ -53,7 +54,7 @@ class TestValidatorIntegration:
         assert len(result2.issues) == 1
 
     def test_validation_accumulation(self):
-        """Test accumulating validation results."""
+        """Test accumulating validation results across batches."""
         batches = [
             pa.record_batch({"id": [1, 2], "text": ["a", "b"]}),
             pa.record_batch({"id": [3, 4], "text": ["c", "d\ufffd"]}),
@@ -64,8 +65,23 @@ class TestValidatorIntegration:
         all_bad_rows = 0
 
         for batch in batches:
-            mask = _get_bad_row_mask(batch)
-            clean, bad = _partition_by_validity(batch, mask)
+            # Create bad row mask by validating string columns
+            bad_mask = pa.repeat(pa.scalar(False, type=pa.bool_()), batch.num_rows)
+
+            for field in batch.schema:
+                column = batch[field.name]
+                if pa.types.is_string(column.type) or pa.types.is_large_string(
+                    column.type
+                ):
+                    column_mask, _ = structural.validate_string_column(
+                        column, field.name
+                    )
+                    bad_mask = pc.or_(bad_mask, column_mask)
+
+            if isinstance(bad_mask, pa.ChunkedArray):
+                bad_mask = bad_mask.combine_chunks()
+
+            clean, bad = _partition_by_validity(batch, bad_mask)
             all_clean_rows += clean.num_rows
             all_bad_rows += bad.num_rows
 

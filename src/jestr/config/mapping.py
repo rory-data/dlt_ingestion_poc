@@ -5,10 +5,9 @@ from datetime import date, datetime, time
 from typing import TYPE_CHECKING
 
 import pyarrow as pa
-from sqlalchemy.sql import sqltypes
 
 if TYPE_CHECKING:
-    from sqlalchemy.types import TypeEngine
+    pass
 
 # ODCS Logical Types to Python Types
 LOGICAL_TO_PY_TYPE_MAP: dict[str, type] = {

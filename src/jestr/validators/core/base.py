@@ -49,47 +49,6 @@ class Validator(Protocol):
         ...
 
 
-def _get_bad_row_mask(table: pa.Table) -> pa.Array:
-    """Create a boolean mask for rows that have any data quality issues.
-
-    Pure function: takes a table, returns a mask. No side effects.
-
-    Uses Arrow compute functions to find rows with invalid characters
-    or replacement characters.
-
-    Args:
-        table: PyArrow Table to check
-
-    Returns:
-        Boolean array where True indicates a bad row
-    """
-    # Start with all False (no issues)
-    bad_mask = pa.repeat(pa.scalar(False, type=pa.bool_()), table.num_rows)
-
-    # For string columns, check for invalid characters and replacement characters
-    for name in table.schema.names:
-        col = table.column(name)
-        if not (pa.types.is_string(col.type) or pa.types.is_large_string(col.type)):
-            continue
-
-        # Non-printable characters (fills nulls as valid)
-        non_printable = pc.utf8_is_printable(col)
-        # Invert and fill nulls (nulls are considered 'clean')
-        is_bad_char = pc.invert(pc.fill_null(non_printable, True))
-
-        # Replacement characters
-        has_replacement = pc.match_substring(col, "\ufffd")
-        has_replacement = pc.fill_null(has_replacement, False)
-
-        bad_mask = pc.or_(bad_mask, is_bad_char)
-        bad_mask = pc.or_(bad_mask, has_replacement)
-
-    if isinstance(bad_mask, pa.ChunkedArray):
-        bad_mask = bad_mask.combine_chunks()
-
-    return bad_mask
-
-
 def _partition_by_validity(
     table: pa.Table, bad_mask: pa.Array
 ) -> tuple[pa.Table, pa.Table]:

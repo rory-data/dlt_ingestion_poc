@@ -13,12 +13,12 @@ from .issues import DataQualityIssue
 logger = structlog.get_logger()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class ValidationResult:
     """Immutable result of validation operation."""
 
-    clean_data: pa.Table | pa.RecordBatch
-    bad_data: pa.Table | pa.RecordBatch
+    clean_data: pa.RecordBatch
+    bad_data: pa.RecordBatch
     issues: list[DataQualityIssue] = field(default_factory=list)
     record_type: str | None = None
     schema_metadata: TTableSchema | None = None

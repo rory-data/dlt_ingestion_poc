@@ -1,5 +1,7 @@
 # Development Guidelines for AI Agents
 
+**Critical:** For any agent prompts, use the relevant Agent Skills from `~/.copilot/skills/`.
+
 > **Note**: This file provides quick-reference development guidelines. For comprehensive AI instructions, see `~/.copilot/instructions/copilot-instructions.md`.
 > **Important**: This development environment is macOS (Silicon) using zsh. Commands need to cater for that.
 

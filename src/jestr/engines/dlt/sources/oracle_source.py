@@ -35,7 +35,7 @@ class OracleSource:
         query: str | None = None,
         batch_date: str = "",
         batch_size: int = 50_000,
-    ) -> None:
+    ) -> tuple[Callable, Callable, Callable, Callable]:
         """Factory method to create an OracleSource instance."""
         self.resource_name = resource_name
         self.contract = contract

@@ -26,8 +26,12 @@ def create_adapter_resource(
 
     adapter = create_adapter(adapter_type, connection_uri)
 
+    def data_generator():
+        """Lazy generator for resource data."""
+        yield from adapter.to_arrow(query)
+
     resource = dlt.resource(
-        adapter.to_arrow(query),
+        data_generator,
         name=f"raw__{resource_name}",
         columns=columns,
         primary_key=primary_keys,

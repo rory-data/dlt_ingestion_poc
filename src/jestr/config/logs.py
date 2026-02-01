@@ -16,10 +16,73 @@ def logging_context(batch_id: str, source_name: str, resource_name: str):
     try:
         for key, value in locals().items():
             if value is not None:
-                structlog.contextvars.bind_contextvars(**{key, value})
+                structlog.contextvars.bind_contextvars(**{key: value})
         yield
     finally:
         structlog.contextvars.clear_contextvars()
+
+
+def _orjson_serialiser(obj, **kwargs) -> str:
+    """Serialize object to JSON, with fallback for non-serializable types."""
+    try:
+        return orjson.dumps(obj, default=str).decode("utf-8")
+    except (TypeError, ValueError) as exc:
+        return orjson.dumps(
+            {
+                "error": "Serialisation failed",
+                "type": str(obj),
+                "exception": str(exc),
+            }
+        ).decode("utf-8")
+
+
+def _get_renderer(json_output: bool):
+    """Get the appropriate renderer based on output format."""
+    if json_output:
+        return structlog.processors.JSONRenderer(serializer=_orjson_serialiser)
+    return structlog.dev.ConsoleRenderer(colors=True)
+
+
+def _build_handlers_config(console_output: bool) -> tuple[dict, list]:
+    """Build handlers configuration and root handlers list."""
+    handlers_config = {}
+    root_handlers = []
+
+    if console_output:
+        handlers_config["console"] = {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stderr",
+            "formatter": "structured",
+        }
+        root_handlers.append("console")
+
+    # Write logs to file, overwriting on each run
+    handlers_config["file"] = {
+        "class": "logging.FileHandler",
+        "filename": "jestr.log",
+        "mode": "w",
+        "formatter": "file_structured",
+    }
+    root_handlers.append("file")
+
+    return handlers_config, root_handlers
+
+
+def _cleanup_logging() -> None:
+    """Clear and reset all existing loggers and handlers."""
+    # Clear any handlers from root logger
+    for handler in logging.root.handlers[:]:
+        if hasattr(handler, "close"):
+            handler.close()
+        logging.root.removeHandler(handler)
+
+    # Reset all existing loggers to avoid configuration conflicts
+    for logger_name in list(logging.root.manager.loggerDict.keys()):
+        existing_logger = logging.getLogger(logger_name)
+        for handler in existing_logger.handlers[:]:
+            if hasattr(handler, "close"):
+                handler.close()
+            existing_logger.removeHandler(handler)
 
 
 def setup_logger(
@@ -66,92 +129,36 @@ def setup_logger(
     )
 
     # Configure standard logging with ProcessorFormatter
-    handlers_config = {}
-    root_handlers = []
+    handlers_config, root_handlers = _build_handlers_config(console_output)
+    _cleanup_logging()
+    renderer = _get_renderer(json_output)
 
-    if console_output:
-        handlers_config["console"] = {
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stderr",
-            "formatter": "structured",
+    logging.config.dictConfig(
+        {
+            "version": 1,
+            "disable_existing_loggers": True,
+            "formatters": {
+                "structured": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processors": [
+                        structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                        renderer,
+                    ],
+                    "foreign_pre_chain": pre_chain,
+                },
+                "file_structured": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processors": [
+                        structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                        structlog.processors.KeyValueRenderer(key_order=None),
+                    ],
+                    "foreign_pre_chain": pre_chain,
+                },
+            },
+            "handlers": handlers_config,
+            "root": {
+                "level": level,
+                "handlers": root_handlers,
+            },
         }
-        root_handlers.append("console")
-
-    # Write logs to file, overwriting on each run
-    handlers_config["file"] = {
-        "class": "logging.FileHandler",
-        "filename": "jestr.log",
-        "mode": "w",
-        "formatter": "file_structured",
-    }
-    root_handlers.append("file")
-
-    if handlers_config:
-        # Clear and close all existing handlers to ensure clean state
-        for handler in logging.root.handlers[:]:
-            if hasattr(handler, "close"):
-                handler.close()
-            logging.root.removeHandler(handler)
-
-        # Select renderer based on output format with error handling
-        if json_output:
-
-            def orjson_serialiser(obj, **kwargs):
-                try:
-                    return orjson.dumps(obj, default=str).decode("utf-8")
-                except (TypeError, ValueError) as exc:
-                    return orjson.dumps(
-                        {
-                            "error": "Serialisation failed",
-                            "type": str(obj),
-                            "exception": str(exc),
-                        }
-                    ).decode("utf-8")
-
-            renderer = structlog.processors.JSONRenderer(serializer=orjson_serialiser)
-        else:
-            renderer = structlog.dev.ConsoleRenderer(colors=True)
-
-        # Clear any handlers from root logger to prevent conflicts with dictConfig
-        for handler in logging.root.handlers[:]:
-            if hasattr(handler, "close"):
-                handler.close()
-            logging.root.removeHandler(handler)
-
-        # Reset all existing loggers to avoid configuration conflicts
-        for logger_name in list(logging.root.manager.loggerDict.keys()):
-            existing_logger = logging.getLogger(logger_name)
-            for handler in existing_logger.handlers[:]:
-                if hasattr(handler, "close"):
-                    handler.close()
-                existing_logger.removeHandler(handler)
-
-        logging.config.dictConfig(
-            {
-                "version": 1,
-                "disable_existing_loggers": True,
-                "formatters": {
-                    "structured": {
-                        "()": structlog.stdlib.ProcessorFormatter,
-                        "processors": [
-                            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-                            renderer,
-                        ],
-                        "foreign_pre_chain": pre_chain,
-                    },
-                    "file_structured": {
-                        "()": structlog.stdlib.ProcessorFormatter,
-                        "processors": [
-                            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-                            structlog.processors.KeyValueRenderer(key_order=None),
-                        ],
-                        "foreign_pre_chain": pre_chain,
-                    },
-                },
-                "handlers": handlers_config,
-                "root": {
-                    "level": level,
-                    "handlers": root_handlers,
-                },
-            }
-        )
+    )

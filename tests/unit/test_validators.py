@@ -3,10 +3,10 @@
 import pyarrow as pa
 import pytest
 
+from jestr.validators.checks import structural
 from jestr.validators.core import (
     DataQualityIssue,
     ValidationResult,
-    _get_bad_row_mask,
     _partition_by_validity,
 )
 from jestr.validators.core.issues import Severity
@@ -204,73 +204,96 @@ class TestValidationResult:
 
 
 @pytest.mark.unit
-class TestGetBadRowMask:
-    """Test _get_bad_row_mask function."""
+class TestStructuralChecks:
+    """Test structural validation checks."""
 
-    def test_get_bad_row_mask_clean_data(self):
-        """Test mask for clean data (no issues)."""
-        table = pa.table(
-            {
-                "id": [1, 2, 3],
-                "text": ["hello", "world", "test"],
-            }
-        )
-        mask = _get_bad_row_mask(table)
+    def test_check_replacement_char_clean_data(self):
+        """Test replacement char check with clean data."""
+        column = pa.array(["hello", "world", "test"])
+        mask, issue = structural.check_replacement_char(column, "text")
         assert mask.type == pa.bool_()
-        assert mask.null_count == 0
-        # Clean data should have all False
         assert not any(mask.to_pylist())
+        assert issue is None
 
-    def test_get_bad_row_mask_detects_replacement_char(self):
-        """Test mask detects Unicode replacement character."""
-        table = pa.table(
-            {
-                "id": [1, 2, 3],
-                "text": ["valid", "bad\ufffd", "valid"],
-            }
-        )
-        mask = _get_bad_row_mask(table)
+    def test_check_replacement_char_detects_issue(self):
+        """Test replacement char check detects issues."""
+        column = pa.array(["valid", "bad\ufffd", "valid"])
+        mask, issue = structural.check_replacement_char(column, "text")
         mask_list = mask.to_pylist()
-        assert mask_list[1] is True  # Row with replacement char
-
-    def test_get_bad_row_mask_numeric_columns_ignored(self):
-        """Test that numeric columns are not checked."""
-        table = pa.table(
-            {
-                "id": [1, 2, 3],
-                "value": [10.5, 20.3, 15.7],
-            }
-        )
-        mask = _get_bad_row_mask(table)
-        # All numeric, should be all False
-        assert not any(mask.to_pylist())
-
-    def test_get_bad_row_mask_mixed_columns(self):
-        """Test mask with mixed column types."""
-        table = pa.table(
-            {
-                "id": [1, 2, 3],
-                "name": ["Alice", "Bob\ufffd", "Charlie"],
-                "age": [25, 30, 35],
-            }
-        )
-        mask = _get_bad_row_mask(table)
-        mask_list = mask.to_pylist()
-        assert mask_list[1] is True  # Row with issue in name
+        assert mask_list[1] is True
         assert not mask_list[0]
         assert not mask_list[2]
+        assert issue is not None
+        assert issue.severity == Severity.WARNING
+        assert issue.issue_type == "Unicode Replacement Character (U+FFFD)"
+        assert issue.issue_count == 1
 
-    def test_get_bad_row_mask_null_handling(self):
-        """Test mask handles nulls correctly."""
-        table = pa.table(
-            {
-                "id": [1, 2, 3],
-                "text": ["valid", None, "valid"],
-            }
-        )
-        mask = _get_bad_row_mask(table)
-        # Nulls should be considered clean
-        assert not mask.to_pylist()[1]
+    def test_check_replacement_char_handles_nulls(self):
+        """Test replacement char check handles nulls correctly."""
+        column = pa.array(["valid", None, "valid"])
+        mask, issue = structural.check_replacement_char(column, "text")
+        assert not mask.to_pylist()[1]  # Null should be clean
+        assert issue is None
+
+    def test_check_invalid_chars_clean_data(self):
+        """Test invalid chars check with clean data."""
+        column = pa.array(["hello", "world", "test"])
+        mask, issue = structural.check_invalid_chars(column, "text")
+        assert mask.type == pa.bool_()
+        assert not any(mask.to_pylist())
+        assert issue is None
+
+    def test_check_invalid_chars_detects_issue(self):
+        """Test invalid chars check detects control characters."""
+        column = pa.array(["valid", "bad\x00text", "valid"])
+        mask, issue = structural.check_invalid_chars(column, "text")
+        mask_list = mask.to_pylist()
+        assert mask_list[1] is True
+        assert not mask_list[0]
+        assert not mask_list[2]
+        assert issue is not None
+        assert issue.severity == Severity.CRITICAL
+        assert issue.issue_type == "Invalid Characters (control or non-printable)"
+        assert issue.issue_count == 1
+
+    def test_check_invalid_chars_handles_nulls(self):
+        """Test invalid chars check handles nulls correctly."""
+        column = pa.array(["valid", None, "valid"])
+        mask, issue = structural.check_invalid_chars(column, "text")
+        assert not mask.to_pylist()[1]  # Null should be clean
+        assert issue is None
+
+    def test_validate_string_column_clean_data(self):
+        """Test validate_string_column with clean data."""
+        column = pa.array(["hello", "world", "test"])
+        mask, issues = structural.validate_string_column(column, "text")
+        assert not any(mask.to_pylist())
+        assert len(issues) == 0
+
+    def test_validate_string_column_single_issue_type(self):
+        """Test validate_string_column with one issue type."""
+        column = pa.array(["valid", "bad\ufffd", "valid"])
+        mask, issues = structural.validate_string_column(column, "text")
+        assert mask.to_pylist()[1] is True
+        assert len(issues) == 1
+        assert issues[0].issue_type == "Unicode Replacement Character (U+FFFD)"
+
+    def test_validate_string_column_multiple_issue_types(self):
+        """Test validate_string_column with multiple issue types."""
+        column = pa.array(["valid", "bad\ufffd", "bad\x00"])
+        mask, issues = structural.validate_string_column(column, "text")
+        mask_list = mask.to_pylist()
+        assert mask_list[1] is True  # Replacement char
+        assert mask_list[2] is True  # Control char
+        assert not mask_list[0]
+        assert len(issues) == 2  # Both issue types detected
+
+    def test_validate_string_column_nulls(self):
+        """Test validate_string_column handles nulls correctly."""
+        column = pa.array(["valid", None, "valid"])
+        mask, issues = structural.validate_string_column(column, "text")
+        assert not any(mask.to_pylist())
+        assert len(issues) == 0
 
 
 @pytest.mark.unit
