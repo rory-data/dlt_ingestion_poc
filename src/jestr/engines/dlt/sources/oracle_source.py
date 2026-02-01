@@ -1,0 +1,93 @@
+"""A custom dlt source for Oracle extraction with validation."""
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from dlt.extract import DltResource, DltSource
+
+
+from jestr.contracts import ODCSContract
+
+
+@dataclass
+class OracleSource:
+    """A custom dlt source for Oracle extraction with validation."""
+
+    resource_name: str
+    contract: ODCSContract
+    connection_uri: str
+    database_schema_name: str
+    database_table_name: str
+    full_table_name: str
+    query: str | None = None
+    batch_date: str = ""
+    batch_size: int = 50_000
+
+    def create(
+        self,
+        resource_name: str,
+        contract: ODCSContract,
+        connection_uri: str,
+        database_schema_name: str,
+        database_table_name: str,
+        query: str | None = None,
+        batch_date: str = "",
+        batch_size: int = 50_000,
+    ) -> "OracleSource":
+        """Factory method to create an OracleSource instance."""
+        self.resource_name = resource_name
+        self.contract = contract
+        self.connection_uri = connection_uri
+        self.database_schema_name = database_schema_name
+        self.database_table_name = database_table_name
+        self.full_table_name = (
+            f"{self.database_schema_name}.{self.database_table_name}"
+            if self.database_schema_name
+            else self.database_table_name
+        )
+        self.query = query
+        self.batch_date = batch_date
+        self.batch_size = batch_size
+
+    def build_pipeline_flow(self) -> DltSource:
+        """Convert to a dlt source."""
+        import dlt
+
+        from ..resources.sql import create_custom_sql_resource
+        from ..transformers import create_validation_transformers
+
+        @dlt.source(name=f"ingest__{self.resource_name}")
+        def ingest_oracle_source() -> tuple[Callable, ...]:
+            state = dlt.current.state()
+            state.setdefault("validation_metrics", [])
+
+            def get_resource(self) -> DltResource:
+                return create_custom_sql_resource(
+                    database_type="oracle",
+                    connection_uri=self.connection_uri,
+                    table_name=self.full_table_name,
+                    contract=self.contract,
+                    query=self.query,
+                    batch_size=self.batch_size,
+                    database_schema_name=self.database_schema_name,
+                )
+
+            def get_transformers(self) -> tuple[Callable, Callable, Callable]:
+                from jestr.validators import IngestionValidator
+
+                validator = IngestionValidator(
+                    contract=self.contract,
+                    schema_metadata=None,
+                )
+                return create_validation_transformers(
+                    extract_resource=get_resource(self),
+                    resource_name=self.resource_name,
+                    validator=validator,
+                    batch_date=self.batch_date,
+                )
+
+            return get_resource(self), *get_transformers(self)
+
+        return ingest_oracle_source
