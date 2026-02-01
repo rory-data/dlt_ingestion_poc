@@ -7,7 +7,7 @@ from dlt.common.schema.typing import TTableSchema
 from jestr.contracts import ODCSContract
 
 from .check import structural
-from .core import DataQualityIssue, ValidationResult, Validator, partition_by_validity
+from .core import DataQualityIssue, ValidationResult, Validator, _partition_by_validity
 from .core.base import _get_bad_row_mask
 
 logger = structlog.get_logger()
@@ -29,8 +29,9 @@ class IngestionValidator(Validator):
 
         # First validate the Arrow record structures. Abends if invalid.
         if self._validate_arrow_structures(batch):
-            for column in batch.columns:
-                column_name = batch.schema.field(column.name).name
+            for field in batch.schema:
+                column = batch[field.name]
+                column_name = field.name
 
                 # Validate string columns for encoding issues (single pass).
                 if pa.types.is_string(column.type) or pa.types.is_large_string(
@@ -40,7 +41,7 @@ class IngestionValidator(Validator):
 
             # Bifurcate the batch into clean and bad data based on issues found.
             bad_mask = _get_bad_row_mask(batch)
-            clean_data, bad_data = partition_by_validity(batch, bad_mask)
+            clean_data, bad_data = _partition_by_validity(batch, bad_mask)
 
             return ValidationResult(
                 clean_data=clean_data,
@@ -50,7 +51,7 @@ class IngestionValidator(Validator):
             )
 
     @staticmethod
-    def _is_valid_arrow_structure(self, batch: pa.RecordBatch) -> bool:
+    def _is_valid_arrow_structure(batch: pa.RecordBatch) -> bool:
         """Check if the Arrow RecordBatch structure is valid."""
         try:
             batch.validate(full=True)

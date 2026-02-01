@@ -6,6 +6,7 @@ from typing import Any, Self
 import pyarrow as pa
 import pyarrow.compute as pc
 import structlog
+from dlt.common.schema import TTableSchema
 
 from .issues import DataQualityIssue
 
@@ -20,6 +21,7 @@ class ValidationResult:
     bad_data: pa.Table | pa.RecordBatch
     issues: list[DataQualityIssue] = field(default_factory=list)
     record_type: str | None = None
+    schema_metadata: TTableSchema | None = None
 
     @property
     def is_valid(self) -> bool:
@@ -179,14 +181,14 @@ def extract_issue_summary(
         Tuple of (issue_count, sample_values).
     """
     # Use Arrow compute to get count without bringing data to Python
-    issue_count_scalar = pc.sum(mask).as_py()  # ty: ignore[unresolved-attribute]
+    issue_count_scalar = pc.sum(mask).as_py()
     issue_count = int(issue_count_scalar) if issue_count_scalar is not None else 0
 
     if issue_count == 0:
         return 0, []
 
     # Only extract a few samples for reporting
-    indices = pc.indices_nonzero(mask)  # ty: ignore[unresolved-attribute]
+    indices = pc.indices_nonzero(mask)
     if isinstance(indices, pa.ChunkedArray):
         indices = indices.combine_chunks()
 
