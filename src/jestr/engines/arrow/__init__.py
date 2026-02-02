@@ -8,6 +8,7 @@ from .transforms import (
     drop_first_column,
     rename_columns,
     select_and_rename_columns,
+    standardise_string_column,
 )
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "drop_first_column",
     "rename_columns",
     "select_and_rename_columns",
+    "standardise_string_column",
     "write_batches_to_parquet_impl",
 ]

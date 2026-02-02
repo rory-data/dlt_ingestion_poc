@@ -1,12 +1,20 @@
 """Arrow Batch Extractor: Convert DBAPI cursor rows to Arrow RecordBatches with memory management."""
 
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Protocol
 
 import pyarrow as pa
 import structlog
 
 logger = structlog.get_logger()
+
+
+class DBAPICursor(Protocol):
+    """Protocol for DBAPI cursor objects."""
+
+    def fetchmany(self, size: int) -> list[tuple]:
+        """Fetch up to size rows from the cursor."""
+        ...
 
 
 class ArrowBatchExtractor:
@@ -47,12 +55,12 @@ class ArrowBatchExtractor:
 
     def extract_cursor_batches(
         self,
-        cursor: Iterator[tuple],
+        cursor: DBAPICursor,
         *,
         batch_size: int = 50_000,
         cleanup_interval: int = 10,
     ) -> Iterator[pa.RecordBatch]:
-        """Extract RecordBatches from a DBAPI cursor iterator."""
+        """Extract RecordBatches from a DBAPI cursor."""
         batch_count = 0
 
         try:
@@ -62,7 +70,7 @@ class ArrowBatchExtractor:
                     rows = cursor.fetchmany(batch_size)
                 except Exception as exc:
                     logger.exception("Error fetching rows from batch %d", batch_count)
-                    raise RuntimeError("Fetch failed at batch %d", batch_count) from exc
+                    raise RuntimeError(f"Fetch failed at batch {batch_count}") from exc
 
                 if not rows:
                     logger.debug("Fetch complete: %d batches", batch_count)
@@ -90,7 +98,7 @@ class ArrowBatchExtractor:
                 except (pa.ArrowTypeError, pa.ArrowInvalid) as exc:
                     logger.exception("Arrow conversion error at batch %d", batch_count)
                     raise RuntimeError(
-                        "Arrow conversion failed at batch %d", batch_count
+                        f"Arrow conversion failed at batch {batch_count}"
                     ) from exc
 
         finally:
