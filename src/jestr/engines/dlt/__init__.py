@@ -4,6 +4,7 @@ from .config import RunMode
 from .operations import (
     run_pipeline_with_summary,
 )
+from .sources.oracle_source import OracleSource
 from .transformers import (
     create_validation_transformers,
 )
@@ -12,6 +13,7 @@ from .typing import (
 )
 
 __all__ = [
+    "OracleSource",
     "RunMode",
     "cast_columns_to_dlt_types",
     "create_validation_transformers",

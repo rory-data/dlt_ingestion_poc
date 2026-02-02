@@ -1,7 +1,6 @@
 """A custom dlt source for Oracle extraction with validation."""
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -11,21 +10,10 @@ if TYPE_CHECKING:
 from jestr.contracts import ODCSContract
 
 
-@dataclass
 class OracleSource:
     """A custom dlt source for Oracle extraction with validation."""
 
-    resource_name: str
-    contract: ODCSContract
-    connection_uri: str
-    database_schema_name: str
-    database_table_name: str
-    full_table_name: str
-    query: str | None = None
-    batch_date: str = ""
-    batch_size: int = 50_000
-
-    def create(
+    def __init__(
         self,
         resource_name: str,
         contract: ODCSContract,
@@ -35,8 +23,8 @@ class OracleSource:
         query: str | None = None,
         batch_date: str = "",
         batch_size: int = 50_000,
-    ) -> tuple[Callable, Callable, Callable, Callable]:
-        """Factory method to create an OracleSource instance."""
+    ) -> None:
+        """Initialize OracleSource with configuration."""
         self.resource_name = resource_name
         self.contract = contract
         self.connection_uri = connection_uri
@@ -51,7 +39,31 @@ class OracleSource:
         self.batch_date = batch_date
         self.batch_size = batch_size
 
-    def build_pipeline_flow(self) -> DltSource:
+    @classmethod
+    def create(
+        cls,
+        resource_name: str,
+        contract: ODCSContract,
+        connection_uri: str,
+        database_schema_name: str,
+        database_table_name: str,
+        query: str | None = None,
+        batch_date: str = "",
+        batch_size: int = 50_000,
+    ) -> "OracleSource":
+        """Factory method to create an OracleSource instance."""
+        return cls(
+            resource_name=resource_name,
+            contract=contract,
+            connection_uri=connection_uri,
+            database_schema_name=database_schema_name,
+            database_table_name=database_table_name,
+            query=query,
+            batch_date=batch_date,
+            batch_size=batch_size,
+        )
+
+    def build_pipeline_flow(self) -> "DltSource":
         """Convert to a dlt source."""
         import dlt
 
@@ -60,10 +72,7 @@ class OracleSource:
 
         @dlt.source(name=f"ingest__{self.resource_name}")
         def ingest_oracle_source() -> tuple[Callable, ...]:
-            state = dlt.current.state()
-            state.setdefault("validation_metrics", [])
-
-            def get_resource() -> DltResource:
+            def get_resource() -> "DltResource":
                 return create_custom_sql_resource(
                     database_type="oracle",
                     connection_uri=self.connection_uri,
@@ -81,8 +90,9 @@ class OracleSource:
                     contract=self.contract,
                     schema_metadata=None,
                 )
+                resource = get_resource()
                 return create_validation_transformers(
-                    extract_resource=get_resource(self),
+                    extract_resource=resource,
                     resource_name=self.resource_name,
                     validator=validator,
                     batch_date=self.batch_date,
