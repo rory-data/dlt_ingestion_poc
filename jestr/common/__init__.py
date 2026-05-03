@@ -1,6 +1,6 @@
 """Core jestr components and protocols for duck typing."""
 
-from jestr.core.protocols import (
+from jestr.common.protocols import (
     Adapter,
     ConfigResolver,
     ContractLoader,
@@ -9,20 +9,22 @@ from jestr.core.protocols import (
     DltSource,
     StorageAdapter,
 )
-from jestr.core.registry import (
+from jestr.common.registry import (
     AdapterRegistry,
-    DatabaseAdapterRegistry,
+    DataServiceAdapterRegistry,
     SourceAdapterRegistry,
     StorageAdapterRegistry,
 )
+from jestr.common.settings import ApplicationSettings
 
 __all__ = [
     "Adapter",
     "AdapterRegistry",
+    "ApplicationSettings",
     "ConfigResolver",
     "ContractLoader",
     "ContractProvider",
-    "DatabaseAdapterRegistry",
+    "DataServiceAdapterRegistry",
     "DictLike",
     "DltSource",
     "SourceAdapterRegistry",

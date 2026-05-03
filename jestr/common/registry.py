@@ -60,8 +60,8 @@ class AdapterRegistry:
         _plugins_loaded = False
 
 
-class DatabaseAdapterRegistry(AdapterRegistry):
-    """Registry for database adapters."""
+class DataServiceAdapterRegistry(AdapterRegistry):
+    """Registry for data service adapters."""
 
 
 class StorageAdapterRegistry(AdapterRegistry):
@@ -73,8 +73,8 @@ class SourceAdapterRegistry(AdapterRegistry):
 
 
 # Module-level singleton registries
-_database_registry: DatabaseAdapterRegistry = DatabaseAdapterRegistry()
-_source_ragistry: SourceAdapterRegistry = SourceAdapterRegistry()
+_data_service_registry: DataServiceAdapterRegistry = DataServiceAdapterRegistry()
+_source_registry: SourceAdapterRegistry = SourceAdapterRegistry()
 
 _plugins_loaded: bool = False
 
