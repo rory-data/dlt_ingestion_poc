@@ -1,1 +1,1 @@
-"""Library for defining annd orchestrating the jestr pipelines."""
+"""Library for defining and orchestrating the jestr pipelines."""

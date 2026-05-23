@@ -63,25 +63,27 @@ def extract_schema_changes(load_info: LoadInfo) -> list[SchemaChange]:
                     )
                 )
 
-        for column_name in table_update.get("removed_columns", []):
-            changes.append(
-                SchemaChange(
-                    table_name=table_name,
-                    change_type=ChangeType.DROPPED,
-                    column_name=column_name,
+            for column_name in table_update.get("removed_columns", []):
+                changes.append(
+                    SchemaChange(
+                        table_name=table_name,
+                        change_type=ChangeType.DROPPED,
+                        column_name=column_name,
+                    )
                 )
-            )
 
-        for column_name, type_change in table_update.get("type_changes", {}).items():
-            changes.append(
-                SchemaChange(
-                    table_name=table_name,
-                    change_type=ChangeType.MODIFIED,
-                    column_name=column_name,
-                    old_value=str(type_change.get("old_type", "unknown")),
-                    new_value=str(type_change.get("new_type", "unknown")),
+            for column_name, type_change in table_update.get(
+                "type_changes", {}
+            ).items():
+                changes.append(
+                    SchemaChange(
+                        table_name=table_name,
+                        change_type=ChangeType.MODIFIED,
+                        column_name=column_name,
+                        old_value=str(type_change.get("old_type", "unknown")),
+                        new_value=str(type_change.get("new_type", "unknown")),
+                    )
                 )
-            )
 
     logger.warning(
         "Detected schema changes during pipeline run.",
