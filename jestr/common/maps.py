@@ -8,7 +8,7 @@ import pyarrow as pa
 from jestr.common.constants import DecimalDefaults
 
 # ODCS Logical Types to Python Types
-LOGICAL_TO_PY_TPYE_MAP: dict[str, type] = {
+LOGICAL_TO_PY_TYPE_MAP: dict[str, type] = {
     "date": date,
     "timestamp": datetime,
     "time": time,
@@ -16,7 +16,7 @@ LOGICAL_TO_PY_TPYE_MAP: dict[str, type] = {
     "number": float,
     "integer": int,
     "boolean": bool,
-    "onject": dict,
+    "object": dict,
     "array": list,
 }
 
@@ -68,15 +68,15 @@ TRIVIAL_PAIRS: frozenset[tuple[str, str]] = frozenset(
     }
 )
 
-# Known encoding for specifis source hints to bypass detection
+# Known encoding for specific source hints to bypass detection
 KNOWN_ENCODINGS = {
     "teradata_latin": "windows-1252",
     "mssql_varchar": "windows-1252",
     "sybase_iso1": "iso-8859-1",
 }
 
-# Typographic character subsitutions for cleaning string data
-TYPOGRAPHIC_SUBSTITUITIONS = [
+# Typographic character substitutions for cleaning string data
+TYPOGRAPHIC_SUBSTITUTIONS = [
     # Various single quotes to straight single quote
     (
         "[\u2018\u2019\u201a\u201b]",

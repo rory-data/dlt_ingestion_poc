@@ -35,12 +35,12 @@ class DltSource(Protocol):
         """Execute the extraction logic for this source.
 
         Returns:
-            DLT source/resource object that can be consumed by dit pipelines.
+            DLT source/resource object that can be consumed by dlt pipelines.
         """
         ...
 
     def validate(self) -> dict[str, Any]:
-        """Validate extracted data against contract requtrements.
+        """Validate extracted data against contract requirements.
 
         Returns:
             Dictionary with validation results including:
@@ -63,7 +63,7 @@ class DltSource(Protocol):
 class DictLike(Protocol):
     """Protocol for dict-like objects.
 
-    Any object supporting get) with default value can be used nterchangeably with dicts,
+    Any object supporting get) with default value can be used interchangeably with dicts,
     enabling flexible configuration handling.
 
     Used by: Config resolution, parameter handling
@@ -99,10 +99,10 @@ class ContractLoader(Protocol):
             path: Path to contract file (local, HTTP, etc.)
 
         Returns:
-            Contract object (e.g., OpCSContract) with schema and metadata.
+            Contract object (e.g. ODCSContract) with schema and metadata.
 
         Raises:
-            ContractLoadError; If contract cannot be loaded or parsed.
+            ContractLoadError: If contract cannot be loaded or parsed.
             FileNotFoundError: If path does not exist.
         """
         ...
@@ -123,10 +123,10 @@ class ConfigResolver(Protocol):
         """Resolve configuration from provided arguments.
 
         Args:
-            **kwargs: Input parameters to resolvg (source_params, secrets, etc.)
+            **kwargs: Input parameters to resolve (source_params, secrets, etc.)
 
         Returns:
-            Dictionary with resolved configuratton Including:
+            Dictionary with resolved configuration Including:
             - "storage_adapter": Storage backend for dit
             - "endpoint_url": Optional endpoint for s3, etc.
             - Other resolved parameters
@@ -219,7 +219,7 @@ class Adapter(Protocol):
     def close(self) -> None:
         """Close the connection to the data service and release resources.
 
-        Called when adpater is no loner required. Should be safe to call multiple times.
+        Called when adapter is no longer required. Should be safe to call multiple times.
         """
         ...
 
@@ -265,7 +265,7 @@ class DatabaseAdapter(Protocol):
         ...
 
     def get_arrow_schema(self, query: str) -> pa.Schema:
-        """Get the Arrow schema for the result aet of a query."""
+        """Get the Arrow schema for the result set of a query."""
         ...
 
     def to_parquet(self, query: str, output_path: Path, **kwargs) -> dict[str, Any]:

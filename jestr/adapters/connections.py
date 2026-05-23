@@ -17,7 +17,7 @@ logger = structlog.get_logger(__name__)
 class ConnectionStrategy(Protocol):
     """Protocol for connection management strategies.
 
-    Implementors provide the connection lifecycle without being coupled to the adapter hierarchy.
+    Implementers provide the connection lifecycle without being coupled to the adapter hierarchy.
     """
 
     def connect(self) -> None:
@@ -103,7 +103,7 @@ class ConnectionManager[ConnectionT](ABC):
         self._connection_uri = connection_uri
         self._connection_factory = connection_factory
         self._pool_name = pool_name or self.__class__.__name__
-        self._active_connections: ConnectionT | None = None
+        self._active_connection: ConnectionT | None = None
         self._connections_acquired: int = 0
         self._total_connection_time: float = 0.0
 

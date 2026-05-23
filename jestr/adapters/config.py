@@ -15,7 +15,7 @@ class RetryConfig(BaseModel):
     )
     backoff_multiplier: float = Field(
         default=RetryDefaults.BACKOFF_MULTIPLIER,
-        description="Exponential backpff multiplier applied between retries.",
+        description="Exponential backoff multiplier applied between retries.",
         gt=0.1,
     )
     initial_wait_seconds: float = Field(

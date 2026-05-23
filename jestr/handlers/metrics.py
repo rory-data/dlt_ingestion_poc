@@ -1,4 +1,4 @@
-"""Metrics handler: accumulates pipelines metric in memory across events."""
+"""Metrics handler: accumulates pipeline metrics in memory across events."""
 
 from typing import Any
 
@@ -27,7 +27,7 @@ class MetricsHandler:
         return dict(self._metrics)
 
     def handle(self, event: PipelineEvent) -> None:
-        """Update internal metrics state based on the type of *event* type."""
+        """Update internal metrics state based on the event type."""
         if isinstance(event, PipelineStarted):
             self._metrics = {
                 "pipeline_name": event.pipeline_name,

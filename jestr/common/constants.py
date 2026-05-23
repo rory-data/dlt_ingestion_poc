@@ -5,13 +5,14 @@ from enum import StrEnum
 from typing import ClassVar
 
 UNICODE_REPLACEMENT_CHAR: str = "\ufffd"
+FILE_BASED_SERVER_TYPES: frozenset[str] = frozenset({"local", "s3"})
 
 
 class AdapterType(StrEnum):
     """Enum for supported adapter types.
 
     Each member represents a data service that jestr can interact with. Members are usable
-    as strings, compatible with URI schems and configuration strings.
+    as strings, compatible with URI schemes and configuration strings.
     """
 
     ORACLE = "oracle"
@@ -23,7 +24,7 @@ class AdapterType(StrEnum):
 class SourceType(StrEnum):
     """Enum for supported pipeline source types.
 
-    Broader than AdapterType, includes both data services and fiel-based sources that can
+    Broader than AdapterType, includes both data services and file-based sources that can
     be ingested by the pipeline.
     """
 
@@ -60,10 +61,27 @@ class ValidationMode(StrEnum):
     """Route invalid records to a separate quarantine table for later review, while allowing valid records to be processed."""
 
 
+class EvolutionMode(StrEnum):
+    """Enum for schema evolution handling modes.
+
+    Determines how the pipeline handles changes in the data schema over time, such as new columns being added.
+    Set via the ODCS contract's customProperties.evolutionMode field.
+    """
+
+    STRICT = "strict"
+    """Fail the batch and halt processing if the incoming data schema does not exactly match the expected schema defined in the contract."""
+
+    NOTIFY = "notify"
+    """Allow the batch to proceed but log a warning if the incoming data schema has differences (e.g. new columns) compared to the expected schema, indicating potential evolution that should be reviewed."""
+
+    AUTO_EVOLVE = "auto_evolve"
+    """Automatically adapt to schema changes by allowing new columns to be added to the expected schema, while still enforcing the presence and types of existing columns. This mode enables seamless handling of schema evolution without manual intervention, while maintaining data quality checks on existing schema elements."""
+
+
 class CredentialSource(StrEnum):
     """Enum of credential sources for authentication.
 
-    Defines priority order for resolving credetionsl from multiple potential sources during
+    Defines priority order for resolving credentials from multiple potential sources during
     pipeline initialisation.
     """
 

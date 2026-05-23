@@ -44,13 +44,13 @@ def create_adapter(
         ConfigurationError: If the adapter type is not registered or if there are issues with the provided configuration.
     """
     registry_ = registry or _data_service_registry
+    adapter_type = adapter_type.lower()
     connection_factory = connection_factory or registry_.get_registration(adapter_type)
     load_plugins()  # Ensure plugins are loaded before looking up the adapter class
-    adapter_type = adapter_type.lower()
 
     if not registry_.is_registered(adapter_type):
         raise ConfigurationError(
-            f"Adapter type '{adapter_type}' is not registered."
+            f"Adapter type '{adapter_type}' is not registered. "
             f"Supported types: {', '.join(registry_.list_supported() if registry_.list_supported() else '(none registered)')}"
         )
 

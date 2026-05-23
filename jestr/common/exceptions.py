@@ -1,6 +1,6 @@
 """Customer exception hierarchy for jestr.
 
-This module defines a structure exception hierarchy for jestr, enabling precise error handling
+This module defines a structured exception hierarchy for jestr, enabling precise error handling
 and improved observability.
 
 Exception Hierarchy:
@@ -63,7 +63,7 @@ class AdapterError(JestrError):
 
     Examples:
         - Oracle connection failed due to network timeout
-        - Query execution execceded memory limit
+        - Query execution exceeded memory limit
     """
 
 
@@ -200,7 +200,7 @@ class StorageError(JestrError):
 
 
 class SchemaEvolutionError(JestrError):
-    """Errors that occur due to schema evolutipon beyond contract expectations.
+    """Errors that occur due to schema evolution beyond contract expectations.
 
     Raised when there are issues related to schema evolution, such as new columns added without
     updating the contract, or changes in data types that violate contract definitions.

@@ -1,8 +1,8 @@
-"""Centralised application settings for consolidsting pipeline execution configuration."""
+"""Centralised application settings for consolidating pipeline execution configuration."""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from jestr.common.constants import BatchDefaults
+from .constants import BatchDefaults, RunMode, ValidationMode
 
 
 class ApplicationSettings(BaseSettings):
@@ -26,8 +26,8 @@ class ApplicationSettings(BaseSettings):
     Environment variable: JESTR_ARROW_BATCH_SIZE
     """
 
-    db_fetch_size = BatchDefaults.DB_FETCH_SIZE
-    """Database curose fectchmany() row count (server-side cursor size)
+    db_fetch_size: int = BatchDefaults.DB_FETCH_SIZE
+    """Database cursor fetchmany() row count (server-side cursor size)
 
     Controls the number of rows fetched from the database per round trip when using
     server-side cursors. Larger values can improve performance by reducing round trips,
@@ -38,7 +38,7 @@ class ApplicationSettings(BaseSettings):
 
     network_prefetch_size: int = BatchDefaults.NETWORK_PREFETCH_SIZE
 
-    run_more: str = "extract"
+    run_mode: str = RunMode.EXTRACT.value
 
     sample_rows: int | None = None
 
@@ -57,7 +57,7 @@ class ApplicationSettings(BaseSettings):
     storage_backend: str = "filesystem"
 
     # ===== Validation and Contract Handling =====
-    validation_mode: str = "reject"
+    validation_mode: str = ValidationMode.REJECT.value
 
     # ===== OpenLineage Configuration =====
     openlineage_url: str | None = None
