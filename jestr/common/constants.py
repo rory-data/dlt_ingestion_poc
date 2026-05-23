@@ -78,6 +78,19 @@ class EvolutionMode(StrEnum):
     """Automatically adapt to schema changes by allowing new columns to be added to the expected schema, while still enforcing the presence and types of existing columns. This mode enables seamless handling of schema evolution without manual intervention, while maintaining data quality checks on existing schema elements."""
 
 
+class ChangeType(StrEnum):
+    """Enum for types of schema changes that can be detected during evolution checks."""
+
+    ADDED = "added"
+    """Indicates a new column has been added to the incoming data schema that was not present in the expected schema."""
+
+    DROPPED = "dropped"
+    """Indicates a column that was present in the expected schema is missing from the incoming data schema."""
+
+    MODIFIED = "modified"
+    """Indicates a column is present in both schemas but has differences in type, nullability, or other attributes."""
+
+
 class CredentialSource(StrEnum):
     """Enum of credential sources for authentication.
 
