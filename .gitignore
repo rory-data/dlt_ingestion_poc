@@ -1,7 +1,14 @@
-files/
-.draft/
+# Application specifics
+.astro
+.dlt
+.dbt
+.kata.local.toml
 
-docs/source
+# Project specifics
+sandbox/
+_old/
+data/
+
 
 # From https://raw.githubusercontent.com/github/gitignore/main/Python.gitignore
 
@@ -129,6 +136,9 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
+# ruff cache
+.ruff_cache/
+
 # Cython debug symbols
 cython_debug/
 
@@ -136,7 +146,4 @@ cython_debug/
 .vscode/
 .DS_Store
 
-# Application specifics
-.astro
-#.dlt
-.dbt
+
